@@ -25,7 +25,7 @@
 
 所有脚本的 --port 参数用 7842。
 
-## API 端点 (http://localhost:7842)
+## API 端点 (http://0.0.0.0:7842)
 
 ### 基础
 /status, /state, /move, /stop, /face, /select, /position
@@ -135,9 +135,9 @@
 ### 存取箱子
 ```bash
 # 存入（指定箱子坐标 + 物品名）
-curl -X POST http://localhost:7842/store -d '{"x":70,"y":14,"name":"Wood"}'
+curl -X POST http://0.0.0.0:7842/store -d '{"x":70,"y":14,"name":"Wood"}'
 # 存所有非工具物品
-curl -X POST http://localhost:7842/store -d '{"x":70,"y":14}'
+curl -X POST http://localhos0.0.0.0:7842/store -d '{"x":70,"y":14}'
 ```
 
 ## 协作
@@ -170,7 +170,7 @@ Start-Process "E:\SteamLibrary\steamapps\common\Stardew Valley\StardewModdingAPI
 启动后需要手动进存档（或等the player操作），然后轮询等待 worldReady：
 ```bash
 # 3. 等待游戏就绪
-until curl -s http://localhost:7842/status 2>/dev/null | grep -q '"worldReady":true'; do sleep 5; done
+until curl -s http://0.0.0.0:7842/status 2>/dev/null | grep -q '"worldReady":true'; do sleep 5; done
 echo "Game ready!"
 ```
 
@@ -211,7 +211,7 @@ CC回复 → /chat/push (:7842) → Game ChatHud
 #### CC端启动步骤
 1. 后台启动channel server：`bash ~/source/NagiBridge/scripts/start_channel.sh`
 2. Monitor监听消息：`tail -f ~/nagi/overlay_inbox.jsonl | grep --line-buffered text`
-3. 用 `/chat/push` 回复：`curl -X POST http://localhost:7842/chat/push -d '{"sender":"Nagi","message":"Hello!"}'`
+3. 用 `/chat/push` 回复：`curl -X POST http://0.0.0.0:7842/chat/push -d '{"sender":"Nagi","message":"Hello!"}'`
 
 ### 聊天面板操作
 | 键 | 操作 |

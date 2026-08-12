@@ -30,7 +30,7 @@ The project uses [`Pathoschild.Stardew.ModBuildConfig`](https://github.com/Patho
 
 ## HTTP API
 
-Game starts an HTTP server on `localhost:7842` (host) / `7843` (farmhand).
+Game starts an HTTP server on `0.0.0.0:7842` (host) / `7843` (farmhand).
 
 Full endpoint list: see [AGENTS.md](AGENTS.md)
 
@@ -153,7 +153,7 @@ Monitor(description="stardew chat", persistent=true,
 
 **3. Reply to player** via API:
 ```bash
-curl -X POST http://localhost:7842/chat/push \
+curl -X POST http://0.0.0.0:7842/chat/push \
   -H "Content-Type: application/json" \
   -d '{"sender":"Nagi","message":"Hello!"}'
 ```
@@ -163,7 +163,7 @@ curl -X POST http://localhost:7842/chat/push \
 ```json
 {
   "Mode": "cc",
-  "ChannelServerUrl": "http://localhost:9000/chat"
+  "ChannelServerUrl": "http://0.0.0.0:9000/chat"
 }
 ```
 

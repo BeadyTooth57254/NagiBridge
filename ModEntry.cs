@@ -634,7 +634,7 @@ public class ModEntry : Mod
                 try
                 {
                     var listener = new HttpListener();
-                    listener.Prefixes.Add($"http://localhost:{_port}/");
+                    listener.Prefixes.Add($"http://+:{_port}/");
                     listener.Start();
                     _listener = listener;
                     Monitor.Log($"NagiBridge HTTP server started on port {_port}", LogLevel.Info);
