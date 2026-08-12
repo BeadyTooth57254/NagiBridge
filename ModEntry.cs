@@ -627,9 +627,9 @@ public class ModEntry : Mod
 
         Task.Run(async () =>
         {
-            // Auto-detect available port starting from 7842
+            // Auto-detect available port starting from 58331
             _listener = null;
-            for (_port = 7842; _port < 7850; _port++)
+            for (_port = 58331; _port < 58339; _port++)
             {
                 try
                 {
@@ -648,7 +648,7 @@ public class ModEntry : Mod
 
             if (_listener == null)
             {
-                Monitor.Log("Failed to start HTTP server on any port (7842-7849)", LogLevel.Error);
+                Monitor.Log("Failed to start HTTP server on any port (58331-58338)", LogLevel.Error);
                 return;
             }
 
