@@ -31,7 +31,7 @@ await server.connect(transport);
 
 Bun.serve({
   port: LISTEN_PORT,
-  hostname: "127.0.0.1",
+  hostname: "0.0.0.0",
   async fetch(req: Request) {
     if (req.method !== "POST") {
       return new Response("use POST", { status: 405 });

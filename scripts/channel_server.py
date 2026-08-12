@@ -32,6 +32,6 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 if __name__ == "__main__":
-    server = HTTPServer(("127.0.0.1", 9000), Handler)
+    server = HTTPServer(("0.0.0.0", 9000), Handler)
     print(f"Channel server listening on :9000, inbox: {INBOX}", flush=True)
     server.serve_forever()

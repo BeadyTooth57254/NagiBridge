@@ -336,7 +336,7 @@ class ChatOverlay:
         self.root.after(50, self.process_queue)
 
     def run(self):
-        server = HTTPServer(("127.0.0.1", self.port), OverlayHandler)
+        server = HTTPServer(("0.0.0.0", self.port), OverlayHandler)
         server.msg_queue = self.msg_queue
         server.overlay = self
         thread = threading.Thread(target=server.serve_forever, daemon=True)
