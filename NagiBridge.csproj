@@ -22,6 +22,6 @@
   -->
   <ItemGroup>
     <PackageReference Include="Pathoschild.Stardew.ModBuildConfig" Version="4.*" />
-    <PackageReference Include="HarmonyLib" Version="2.*" />
+    <PackageReference Include="Lib.Harmony" Version="2.*" />
   </ItemGroup>
 </Project>
