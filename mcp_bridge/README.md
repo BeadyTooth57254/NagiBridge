@@ -20,6 +20,12 @@
 
 手机和电脑**同一 Wi-Fi**，不依赖任何云服务器。
 
+**最省事（一键启动）：**
+1. 双击 `gen_token.bat` —— 生成一次性 token 并写到 `token.txt`，屏幕会显示它（之后粘到 operit）。
+2. 双击 `launcher.bat` —— 自动开两个窗口（桥 8000 + 隧道客户端），token、游戏地址都自动带了。
+3. operit 填 `http://192.168.100.236:8000/mcp`，鉴权 Bearer = step 1 显示的 token。
+
+**手动（等价，想自己来也可以）：**
 ```pwsh
 # ① 电脑上起桥（0.0.0.0:8000）
 $env:NAGI_BRIDGE_TOKEN='你的强密钥'
