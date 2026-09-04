@@ -126,3 +126,8 @@ operit 用 `read_ingame` 读取，用 `send_ingame` 回复，桥再通过 `/chat
 | `OperitBridgeToken` | 转发聊天时发给桥的共享 token | 空 |
 | `ApiProvider`/`ApiUrl`/`ApiKey`/`Model` | 旧的直连 LLM 聊天选项 | — |
 | `ChannelServerUrl` | 旧的 channel-server 聊天选项 | `http://localhost:9000/chat` |
+
+## 开源许可
+
+基于 [MIT License](LICENSE) 发布。原始框架版权归
+[anqinou-art](https://github.com/anqinou-art/NagiBridge)；co-op / MCP 桥等适配由 BeadyTooth57254 添加。

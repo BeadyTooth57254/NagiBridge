@@ -135,3 +135,8 @@ Full endpoint list: [AGENTS.md](AGENTS.md)
 | `OperitBridgeToken` | Shared token sent to the bridge for chat forwarding | empty |
 | `ApiProvider`/`ApiUrl`/`ApiKey`/`Model` | Legacy direct-LLM chat option | — |
 | `ChannelServerUrl` | Legacy channel-server chat option | `http://localhost:9000/chat` |
+
+## License
+
+Licensed under the [MIT License](LICENSE). Original framework credit to
+[anqinou-art](https://github.com/anqinou-art/NagiBridge); co-op / MCP bridge additions by BeadyTooth57254.
