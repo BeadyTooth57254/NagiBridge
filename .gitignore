@@ -6,3 +6,6 @@ __pycache__/
 node_modules/
 chat_outbox.txt
 mcp_bridge/token.txt
+# release build artifacts (upload to GitHub Releases, don't commit)
+NagiBridge.zip
+NagiBridge-mcp_bridge.zip
