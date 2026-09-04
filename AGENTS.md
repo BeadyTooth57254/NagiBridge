@@ -113,6 +113,19 @@
 | `/pause` | POST | 冻结时间 |
 | `/resume` | POST | 恢复时间 |
 
+## 远程 MCP 桥（mcp_bridge/）
+
+把游戏操控装成远程 MCP，手机 operit 连上可直控。
+
+- **Zeabur**：`mcp_bridge/server.py`（用 `mcp` SDK 的 FastMCP + `streamable_http_app` 当**根 app**，`app.router.add_websocket_route("/tunnel")` 挂隧道——注意 streamable app 必须当根，mount 到子路径会坏掉 session manager）
+- **电脑**：`mcp_bridge/client.py` 常驻，按 `ROUTES` 把方法映射到游戏 HTTP
+- **双模式**：同一套代码。LAN（server+client 同机，手机连局域网 IP）与云端（server 上 Zeabur，手机连 https）都支持；client 用 `NAGI_BRIDGE_URLS` 逗号分隔**同时挂多个桥**，LAN+云端一起活，手机选能到的那个即可
+- 传输：streamable HTTP（`/mcp`），手机端模型直接驱动工具（无服务器 agent 循环）
+- 安全：`NAGI_BRIDGE_TOKEN` 为隧道 token（真正的门）；**`/mcp` 默认要求 Bearer 鉴权**（`NAGI_BRIDGE_MCP_AUTH=1`），operit 端填 Bearer = token；无 token 一律 401
+- 关键：游戏在 Es 电脑 NAT 后面，云服务器连不到 → 反向隧道（电脑端主动外连）是前提
+- 本地验证：`mock_game.py` + `server.py` + `client.py` 三进程，用 mcp 客户端连 `/mcp` 测往返（已跑通）
+- 加工具：`server.py` 加 `@mcp.tool()` + `client.py` 的 `ROUTES` 登记映射
+
 ## 模组键位映射（自动提取，AI 直接按）
 
 新增 `scripts/extract_keybinds.py`：扫描**全部** mod 的 config，提取"哪个 mod 的哪个功能绑了哪个键"，输出到 `scripts/mods_keybinds.json`。
