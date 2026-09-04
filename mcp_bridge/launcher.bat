@@ -11,6 +11,15 @@ if "%TOKEN%"=="" (
 )
 
 echo.
+echo   [REMINDER] Make sure Stardew Valley is ALREADY running and you have
+echo              loaded your save (you are IN the farm), then continue.
+echo              If the game is not up yet, the client will just keep
+echo              retrying http://127.0.0.1:58331 and stay disconnected.
+echo.
+echo   Press any key once the game is ready...
+pause >nul
+
+echo.
 echo Starting NagiBridge MCP bridge and tunnel client (2 windows)...
 echo.
 
