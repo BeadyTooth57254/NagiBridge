@@ -81,6 +81,36 @@ def interact():
     return _post("/interact")
 
 
+def ctx(radius=8):
+    """Return a compact text/ASCII map of the area around the player (AI-friendly)."""
+    return _get("/ctx", {"radius": radius})
+
+
+def act():
+    """Interact with the object/NPC/tile the farmer is facing."""
+    return _post("/interact")
+
+
+def dialogue_next(count=1):
+    """Advance dialogue/menu by pressing confirm (Enter)."""
+    return _post("/key", {"key": "confirm", "count": count})
+
+
+def drop():
+    """Drop the currently held item on the ground next to the farmer."""
+    return _post("/drop")
+
+
+def follow(target):
+    """Auto-follow a farmer/npc/coordinate (empty target stops)."""
+    return _post("/follow", {"target": target})
+
+
+def area(op, x1, y1, x2, y2):
+    """Batch-op over a tile box (water/unwater HoeDirt in one call)."""
+    return _post("/area", {"op": op, "x1": x1, "y1": y1, "x2": x2, "y2": y2})
+
+
 def chat(message):
     return _post("/chat", {"message": message})
 

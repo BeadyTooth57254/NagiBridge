@@ -1,0 +1,511 @@
+[
+  {
+    "mod": "StardewUI",
+    "modId": null,
+    "file": "config.json",
+    "feature": "ToggleHotkeys",
+    "path": "Tracing.ToggleHotkeys",
+    "keys": [
+      "LeftControl",
+      "LeftShift",
+      "F6"
+    ]
+  },
+  {
+    "mod": "NatureInTheValley",
+    "modId": null,
+    "file": "config.json",
+    "feature": "KeyForEncy",
+    "path": "KeyForEncy",
+    "keys": [
+      "I",
+      "LeftShift"
+    ]
+  },
+  {
+    "mod": "[UI2]UIInfoSuite2",
+    "modId": null,
+    "file": "config.json",
+    "feature": "OpenCalendarKeybind",
+    "path": "OpenCalendarKeybind",
+    "keys": [
+      "C"
+    ]
+  },
+  {
+    "mod": "[UI2]UIInfoSuite2",
+    "modId": null,
+    "file": "config.json",
+    "feature": "OpenQuestBoardKeybind",
+    "path": "OpenQuestBoardKeybind",
+    "keys": [
+      "H"
+    ]
+  },
+  {
+    "mod": "Content Patcher",
+    "modId": "Pathoschild.ContentPatcher",
+    "file": "config.json",
+    "feature": "ToggleDebug",
+    "path": "Controls.ToggleDebug",
+    "keys": [
+      "F3"
+    ]
+  },
+  {
+    "mod": "Content Patcher",
+    "modId": "Pathoschild.ContentPatcher",
+    "file": "config.json",
+    "feature": "DebugPrevTexture",
+    "path": "Controls.DebugPrevTexture",
+    "keys": [
+      "LeftControl"
+    ]
+  },
+  {
+    "mod": "Content Patcher",
+    "modId": "Pathoschild.ContentPatcher",
+    "file": "config.json",
+    "feature": "DebugNextTexture",
+    "path": "Controls.DebugNextTexture",
+    "keys": [
+      "RightControl"
+    ]
+  },
+  {
+    "mod": "[mod模组菜单]GenericModConfigMenu",
+    "modId": null,
+    "file": "config.json",
+    "feature": "OpenMenuKey",
+    "path": "OpenMenuKey",
+    "keys": [
+      "RightControl"
+    ]
+  },
+  {
+    "mod": "NPC Map Locations",
+    "modId": "Bouhm.NPCMapLocations",
+    "file": "config.json",
+    "feature": "MinimapToggleKey",
+    "path": "MinimapToggleKey",
+    "keys": [
+      "OemPipe"
+    ]
+  },
+  {
+    "mod": "NPC Map Locations",
+    "modId": "Bouhm.NPCMapLocations",
+    "file": "config.json",
+    "feature": "TooltipKey",
+    "path": "TooltipKey",
+    "keys": [
+      "Space"
+    ]
+  },
+  {
+    "mod": "[制造栏大改]BetterCrafting",
+    "modId": null,
+    "file": "config.json",
+    "feature": "SearchKey",
+    "path": "SearchKey",
+    "keys": [
+      "F3"
+    ]
+  },
+  {
+    "mod": "[大宗资源存储]ResourceStorage",
+    "modId": null,
+    "file": "config.json",
+    "feature": "ModKey1",
+    "path": "ModKey1",
+    "keys": [
+      "LeftShift"
+    ]
+  },
+  {
+    "mod": "[大宗资源存储]ResourceStorage",
+    "modId": null,
+    "file": "config.json",
+    "feature": "ModKey2",
+    "path": "ModKey2",
+    "keys": [
+      "LeftControl"
+    ]
+  },
+  {
+    "mod": "[大宗资源存储]ResourceStorage",
+    "modId": null,
+    "file": "config.json",
+    "feature": "ModKey3",
+    "path": "ModKey3",
+    "keys": [
+      "LeftAlt"
+    ]
+  },
+  {
+    "mod": "[大宗资源存储]ResourceStorage",
+    "modId": null,
+    "file": "config.json",
+    "feature": "ResourcesKey",
+    "path": "ResourcesKey",
+    "keys": [
+      "R"
+    ]
+  },
+  {
+    "mod": "Control Tree",
+    "modId": "Cluom.ControlTree",
+    "file": "config.json",
+    "feature": "ModEnableToggleKey",
+    "path": "ModEnableToggleKey",
+    "keys": [
+      "V"
+    ]
+  },
+  {
+    "mod": "Tractor Mod",
+    "modId": "Pathoschild.TractorMod",
+    "file": "config.json",
+    "feature": "SummonTractor",
+    "path": "Controls.SummonTractor",
+    "keys": [
+      "Back"
+    ]
+  },
+  {
+    "mod": "Tractor Mod",
+    "modId": "Pathoschild.TractorMod",
+    "file": "config.json",
+    "feature": "DismissTractor",
+    "path": "Controls.DismissTractor",
+    "keys": [
+      "Back"
+    ]
+  },
+  {
+    "mod": "[更好的祝尼魔]BetterJunimos",
+    "modId": null,
+    "file": "config.json",
+    "feature": "SpawnJunimoKeybind",
+    "path": "Other.SpawnJunimoKeybind",
+    "keys": [
+      "J"
+    ]
+  },
+  {
+    "mod": "[梯子定位器]LadderLocator",
+    "modId": null,
+    "file": "config.json",
+    "feature": "ToggleHighlightTypeKey",
+    "path": "ToggleHighlightTypeKey",
+    "keys": [
+      "LeftShift",
+      "OemTilde"
+    ]
+  },
+  {
+    "mod": "Convenient Inventory",
+    "modId": "gaussfire.ConvenientInventory",
+    "file": "config.json",
+    "feature": "QuickStackKeyboardHotkey",
+    "path": "QuickStackKeyboardHotkey",
+    "keys": [
+      "Q"
+    ]
+  },
+  {
+    "mod": "Convenient Inventory",
+    "modId": "gaussfire.ConvenientInventory",
+    "file": "config.json",
+    "feature": "QuickStackControllerHotkey",
+    "path": "QuickStackControllerHotkey",
+    "keys": [
+      "LeftStick"
+    ]
+  },
+  {
+    "mod": "Convenient Inventory",
+    "modId": "gaussfire.ConvenientInventory",
+    "file": "config.json",
+    "feature": "FavoriteItemsKeyboardHotkey",
+    "path": "FavoriteItemsKeyboardHotkey",
+    "keys": [
+      "LeftAlt"
+    ]
+  },
+  {
+    "mod": "Convenient Inventory",
+    "modId": "gaussfire.ConvenientInventory",
+    "file": "config.json",
+    "feature": "FavoriteItemsControllerHotkey",
+    "path": "FavoriteItemsControllerHotkey",
+    "keys": [
+      "LeftShoulder"
+    ]
+  },
+  {
+    "mod": "Convenient Inventory",
+    "modId": "gaussfire.ConvenientInventory",
+    "file": "config.json",
+    "feature": "TakeAllButOneKeyboardHotkey",
+    "path": "TakeAllButOneKeyboardHotkey",
+    "keys": [
+      "LeftControl",
+      "LeftShift"
+    ]
+  },
+  {
+    "mod": "Convenient Inventory",
+    "modId": "gaussfire.ConvenientInventory",
+    "file": "config.json",
+    "feature": "TakeAllButOneControllerHotkey",
+    "path": "TakeAllButOneControllerHotkey",
+    "keys": [
+      "LeftTrigger"
+    ]
+  },
+  {
+    "mod": "Customize Anywhere",
+    "modId": "Cherry.CustomizeAnywhere",
+    "file": "config.json",
+    "feature": "CustomizeKey",
+    "path": "CustomizeKey",
+    "keys": [
+      "LeftShift",
+      "D1"
+    ]
+  },
+  {
+    "mod": "Customize Anywhere",
+    "modId": "Cherry.CustomizeAnywhere",
+    "file": "config.json",
+    "feature": "DyeKey",
+    "path": "DyeKey",
+    "keys": [
+      "LeftShift",
+      "D2"
+    ]
+  },
+  {
+    "mod": "Customize Anywhere",
+    "modId": "Cherry.CustomizeAnywhere",
+    "file": "config.json",
+    "feature": "TailoringKey",
+    "path": "TailoringKey",
+    "keys": [
+      "LeftShift",
+      "D3"
+    ]
+  },
+  {
+    "mod": "Customize Anywhere",
+    "modId": "Cherry.CustomizeAnywhere",
+    "file": "config.json",
+    "feature": "DresserKey",
+    "path": "DresserKey",
+    "keys": [
+      "LeftShift",
+      "D4"
+    ]
+  },
+  {
+    "mod": "[移动一切]LetsMoveIt",
+    "modId": null,
+    "file": "config.json",
+    "feature": "ModKey",
+    "path": "ModKey",
+    "keys": [
+      "LeftAlt"
+    ]
+  },
+  {
+    "mod": "[移动一切]LetsMoveIt",
+    "modId": null,
+    "file": "config.json",
+    "feature": "MoveKey",
+    "path": "MoveKey",
+    "keys": [
+      "MouseLeft"
+    ]
+  },
+  {
+    "mod": "[移动一切]LetsMoveIt",
+    "modId": null,
+    "file": "config.json",
+    "feature": "OverwriteKey",
+    "path": "OverwriteKey",
+    "keys": [
+      "LeftControl"
+    ]
+  },
+  {
+    "mod": "[移动一切]LetsMoveIt",
+    "modId": null,
+    "file": "config.json",
+    "feature": "CancelKey",
+    "path": "CancelKey",
+    "keys": [
+      "Escape"
+    ]
+  },
+  {
+    "mod": "[移动一切]LetsMoveIt",
+    "modId": null,
+    "file": "config.json",
+    "feature": "RemoveKey",
+    "path": "RemoveKey",
+    "keys": [
+      "Delete"
+    ]
+  },
+  {
+    "mod": "[移动一切]LetsMoveIt",
+    "modId": null,
+    "file": "config.json",
+    "feature": "ToggleCopyModeKey",
+    "path": "ToggleCopyModeKey",
+    "keys": [
+      "Z"
+    ]
+  },
+  {
+    "mod": "Automate",
+    "modId": "Pathoschild.Automate",
+    "file": "config.json",
+    "feature": "ToggleOverlay",
+    "path": "Controls.ToggleOverlay",
+    "keys": [
+      "U"
+    ]
+  },
+  {
+    "mod": "Auto Break Geode",
+    "modId": "weizinai.AutoBreakGeode",
+    "file": "config.json",
+    "feature": "AutoBreakGeodeKeybind",
+    "path": "AutoBreakGeodeKeybind",
+    "keys": [
+      "F"
+    ]
+  },
+  {
+    "mod": "Fishing Assistant 2",
+    "modId": "ChibiKyu.FishingAssistant2",
+    "file": "config.json",
+    "feature": "EnableAutomationButton",
+    "path": "EnableAutomationButton",
+    "keys": [
+      "F5"
+    ]
+  },
+  {
+    "mod": "Fishing Assistant 2",
+    "modId": "ChibiKyu.FishingAssistant2",
+    "file": "config.json",
+    "feature": "CatchTreasureButton",
+    "path": "CatchTreasureButton",
+    "keys": [
+      "F6"
+    ]
+  },
+  {
+    "mod": "[自动门]AutomaticGates",
+    "modId": null,
+    "file": "config.json",
+    "feature": "HideOverlayScrollKey",
+    "path": "HideOverlayScrollKey",
+    "keys": [
+      "NumPad0"
+    ]
+  },
+  {
+    "mod": "What Do You Want",
+    "modId": "JohnPeters.WhatDoYouWant",
+    "file": "config.json",
+    "feature": "WhatDoYouWantKeypress",
+    "path": "WhatDoYouWantKeypress",
+    "keys": [
+      "F2"
+    ]
+  },
+  {
+    "mod": "Stardew Progress",
+    "modId": "seeinggreen.StardewProgress",
+    "file": "config.json",
+    "feature": "ShowMenuButton",
+    "path": "ShowMenuButton",
+    "keys": [
+      "F3"
+    ]
+  },
+  {
+    "mod": "Chests Anywhere",
+    "modId": "Pathoschild.ChestsAnywhere",
+    "file": "config.json",
+    "feature": "Toggle",
+    "path": "Controls.Toggle",
+    "keys": [
+      "B"
+    ]
+  },
+  {
+    "mod": "Chests Anywhere",
+    "modId": "Pathoschild.ChestsAnywhere",
+    "file": "config.json",
+    "feature": "PrevChest",
+    "path": "Controls.PrevChest",
+    "keys": [
+      "A"
+    ]
+  },
+  {
+    "mod": "Chests Anywhere",
+    "modId": "Pathoschild.ChestsAnywhere",
+    "file": "config.json",
+    "feature": "NextChest",
+    "path": "Controls.NextChest",
+    "keys": [
+      "D"
+    ]
+  },
+  {
+    "mod": "Chests Anywhere",
+    "modId": "Pathoschild.ChestsAnywhere",
+    "file": "config.json",
+    "feature": "PrevCategory",
+    "path": "Controls.PrevCategory",
+    "keys": [
+      "W"
+    ]
+  },
+  {
+    "mod": "Chests Anywhere",
+    "modId": "Pathoschild.ChestsAnywhere",
+    "file": "config.json",
+    "feature": "NextCategory",
+    "path": "Controls.NextCategory",
+    "keys": [
+      "S"
+    ]
+  },
+  {
+    "mod": "Chests Anywhere",
+    "modId": "Pathoschild.ChestsAnywhere",
+    "file": "config.json",
+    "feature": "HoldToMouseWheelScrollChests",
+    "path": "Controls.HoldToMouseWheelScrollChests",
+    "keys": [
+      "LeftControl"
+    ]
+  },
+  {
+    "mod": "Chests Anywhere",
+    "modId": "Pathoschild.ChestsAnywhere",
+    "file": "config.json",
+    "feature": "HoldToMouseWheelScrollCategories",
+    "path": "Controls.HoldToMouseWheelScrollCategories",
+    "keys": [
+      "LeftAlt"
+    ]
+  }
+]

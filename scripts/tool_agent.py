@@ -48,7 +48,78 @@ You can see the game state and control the farmer using tools.
 When the player asks you to do something, use tools to accomplish it.
 Always check the current state first before acting.
 Keep chat responses short (1-2 sentences). Report what you did after completing a task.
-The player's language is Chinese — respond in Chinese."""
+The player's language is Chinese — respond in Chinese.
+To press a mod's keybind, first query the 'keybind' tool (e.g. keybind(query='quick stack')) to find
+the key, then press it with press_key using its 'keychain' string."""
+
+# ── Mod keybind lookup (from auto-extracted mods_keybinds.json) ──
+
+KEYBINDS_FILE = os.path.join(SCRIPT_DIR, "mods_keybinds.json")
+_keybinds_cache = None
+_keybinds_mtime = 0.0
+
+
+def refresh_keybinds():
+    """Re-scan ALL mods' configs and load the keybind map into memory. Runs at launch."""
+    global _keybinds_cache, _keybinds_mtime
+    try:
+        import extract_keybinds as ek
+        root = ek.find_mods_root()
+        results, _ = ek.build_keybind_map(root)
+        os.makedirs(os.path.dirname(KEYBINDS_FILE), exist_ok=True)
+        with open(KEYBINDS_FILE, "w", encoding="utf-8") as fh:
+            json.dump(results, fh, ensure_ascii=False, indent=2)
+        _keybinds_cache = results
+        _keybinds_mtime = ek.latest_config_mtime(root)
+        return True
+    except Exception:
+        # fall back to whatever already exists on disk
+        try:
+            with open(KEYBINDS_FILE, encoding="utf-8") as fh:
+                _keybinds_cache = json.load(fh)
+        except Exception:
+            _keybinds_cache = []
+        return False
+
+
+def load_keybinds():
+    """Always-fresh keybind list: re-scan if any config.json changed since the last load."""
+    global _keybinds_cache, _keybinds_mtime
+    try:
+        import extract_keybinds as ek
+        if _keybinds_cache is None or ek.latest_config_mtime(ek.find_mods_root()) > _keybinds_mtime:
+            refresh_keybinds()
+    except Exception:
+        if _keybinds_cache is None:
+            _keybinds_cache = []
+    return _keybinds_cache or []
+
+
+def _norm(s):
+    return s.replace(" ", "").replace("-", "").replace("_", "").lower()
+
+
+def query_keybinds(mod=None, query=None):
+    """Return mod keybind entries, each with a ready 'keychain' string for /key."""
+    data = load_keybinds()
+    out = []
+    for e in data:
+        if mod and _norm(mod) not in _norm(e["mod"]):
+            continue
+        if query:
+            hay = _norm(f"{e['mod']} {e['feature']} {e['path']}")
+            if _norm(query) not in hay:
+                continue
+        keys = e.get("keys", []) or []
+        out.append({
+            "mod": e["mod"],
+            "feature": e["feature"],
+            "path": e["path"],
+            "keys": keys,
+            "keychain": "+".join(keys).lower(),
+        })
+    return out
+
 
 # ── Tool Definitions ──
 
@@ -131,7 +202,7 @@ TOOLS = [
     },
     {
         "name": "press_key",
-        "description": "Simulate a key press. Keys: confirm, cancel, skip, ok, F1-F12",
+        "description": "Simulate a key press. Supports any key: letters (a-z), digits, F1-F24, and named keys (confirm, cancel, escape, space, enter, tab, up, down, left, right, etc.). Also supports modifier chords like 'shift+r', 'ctrl+1', 'alt+enter'. Use for mod keybinds / UI screens.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -139,6 +210,79 @@ TOOLS = [
                 "count": {"type": "integer", "default": 1},
             },
             "required": ["key"],
+        },
+    },
+    {
+        "name": "ctx",
+        "description": "Render the area around the player as a compact text/ASCII map (AI-friendly) plus structured tile details. Use this to 'see' the field, layout, crops, objects, NPCs and monsters at a glance. Works on modded maps.",
+        "parameters": {
+            "type": "object",
+            "properties": {"radius": {"type": "integer", "description": "Grid radius in tiles (default 8, max 20)"}},
+            "required": [],
+        },
+    },
+    {
+        "name": "act",
+        "description": "Interact with the object, NPC, or tile the farmer is facing (talk, open chest, operate machine, etc.).",
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "dialogue_next",
+        "description": "Advance the current dialogue / conversation / menu by pressing confirm (Enter). Call repeatedly to page through dialogue or menus.",
+        "parameters": {
+            "type": "object",
+            "properties": {"count": {"type": "integer", "default": 1}},
+            "required": [],
+        },
+    },
+    {
+        "name": "emote",
+        "description": "Play an emote on the farmer. ids: 16=happy, 20=sad, 24=heart, 28=exclamation, 32=note, 36=sleep, 40=game, 52=angry, 56=laugh, 60=blush",
+        "parameters": {
+            "type": "object",
+            "properties": {"id": {"type": "integer"}},
+            "required": ["id"],
+        },
+    },
+    {
+        "name": "drop",
+        "description": "Drop the currently held item on the ground next to the farmer.",
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "follow",
+        "description": "Auto-follow a target by re-pathing each tick. target can be 'player:<name>' (another farmer), 'npc:<name>', or a 'x,y' coordinate. Pass an empty target to stop following.",
+        "parameters": {
+            "type": "object",
+            "properties": {"target": {"type": "string"}},
+            "required": ["target"],
+        },
+    },
+    {
+        "name": "area",
+        "description": "Batch-op over a tile box. op='water' sets every cropped HoeDirt in the box to watered (no walking/stamina); op='unwater' clears it. Provide x1,y1,x2,y2 as the box corners (any order).",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "op": {"type": "string", "enum": ["water", "unwater"]},
+                "x1": {"type": "integer"},
+                "y1": {"type": "integer"},
+                "x2": {"type": "integer"},
+                "y2": {"type": "integer"},
+            },
+            "required": ["op", "x1", "y1", "x2", "y2"],
+        },
+    },
+    {
+        "name": "keybind",
+        "description": "Look up a mod's keybind from its config (auto-extracted from all mods). Use to find the key for a mod feature, then press it with press_key. Provide mod (optional) and/or query (matches mod/feature/path). Returns a ready 'keychain' string to pass to press_key.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "mod": {"type": "string", "description": "Mod name to filter (partial match OK)"},
+                "query": {"type": "string", "description": "Keyword to match mod/feature/path"},
+            },
+            "required": [],
         },
     },
     {
@@ -248,6 +392,22 @@ def execute_tool(name, arguments):
             return game_api("POST", "/use")
         case "press_key":
             return game_api("POST", "/key", {"key": arguments["key"], "count": arguments.get("count", 1)})
+        case "ctx":
+            return game_api("GET", "/ctx", params={"radius": arguments.get("radius", 8)})
+        case "act":
+            return game_api("POST", "/interact")
+        case "dialogue_next":
+            return game_api("POST", "/key", {"key": "confirm", "count": arguments.get("count", 1)})
+        case "emote":
+            return game_api("POST", "/emote", {"id": arguments["id"]})
+        case "drop":
+            return game_api("POST", "/drop")
+        case "follow":
+            return game_api("POST", "/follow", {"target": arguments["target"]})
+        case "area":
+            return game_api("POST", "/area", arguments)
+        case "keybind":
+            return query_keybinds(mod=arguments.get("mod"), query=arguments.get("query"))
         case "craft":
             return game_api("POST", "/craft", {"name": arguments["name"], "count": arguments.get("count", 1)})
         case "sell":
@@ -381,6 +541,12 @@ def run():
     print(f"NagiBridge Tool Agent | provider={args.provider} model={MODEL} port={args.port}")
     print(f"Type your message. The AI will use tools to play the game.")
     print(f"Commands: /quit, /state, /clear\n")
+
+    # Re-scan mod configs at launch so the keybind map reflects current bindings.
+    if refresh_keybinds():
+        print(f"[keybinds] refreshed {len(_keybinds_cache)} bindings from mod configs at launch")
+    else:
+        print("[keybinds] using cached mods_keybinds.json (could not re-scan mods)")
 
     history = []
 

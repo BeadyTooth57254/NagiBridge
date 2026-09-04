@@ -71,12 +71,16 @@
 | `/tool` | POST | 使用工具 `{name}` 或 "current" |
 | `/use` | POST | 使用手持物品（放置类） |
 | `/interact` | POST | 与面前格子交互 |
-| `/key` | POST | 模拟按键（confirm/ok/cancel/skip/F1-F12） |
+| `/key` | POST | 模拟按键（任意键+组合键：`"r"`/`"F5"`/`"shift+r"`/`"ctrl+1"`/`"alt+enter"`） |
 | `/chat` | POST | 发聊天消息 |
 | `/emote` | POST | 播放表情 |
 | `/queue` | POST | 命令队列 |
-| `/surroundings` | GET | 扫描周围 `?radius=10` |
-| `/map` | GET | 地图信息 |
+| `/surroundings` | GET | 扫描周围 `?radius=10`（mod作物/物件显示可读名） |
+| `/map` | GET | 地图信息（建筑/传送/NPC），非网格；要纯文字网格用 /ctx |
+| `/ctx` | GET | 纯文字网格地图 `?radius=8`（一眼看全场，对AI友好，mod作物/物品显示可读名） |
+| `/area` | POST | 批量浇水/清浇 `{op:"water"|"unwater", x1,y1,x2,y2}`（直改土块，不耗体力） |
+| `/drop` | POST | 丢当前手持物品到地上 |
+| `/follow` | POST | 自动跟随 `{target:"player:X"|"npc:X"|"x,y"}`，空 target 停 |
 | `/alerts` | GET/POST | 游戏内警告队列 |
 | `/scan` | GET | 扫描当前地图全部物体 |
 | `/warp` | POST | 传送 `{location, x?, y?}` 矿洞用 `UndergroundMine5` |
@@ -108,6 +112,21 @@
 | `/refill` | POST | 填满水壶 |
 | `/pause` | POST | 冻结时间 |
 | `/resume` | POST | 恢复时间 |
+
+## 模组键位映射（自动提取，AI 直接按）
+
+新增 `scripts/extract_keybinds.py`：扫描**全部** mod 的 config，提取"哪个 mod 的哪个功能绑了哪个键"，输出到 `scripts/mods_keybinds.json`。
+
+- 重新提取：`python scripts/extract_keybinds.py [Mods目录]`（默认 `D:\SteamLibrary\steamapps\common\Stardew Valley\Mods`）
+- **自动实时读取**：`tool_agent.py` 每次启动时会自动重扫全部 mod 的 config 并刷新 `mods_keybinds.json`；运行中若检测到某 config.json 变化也会自动刷新，无需手动跑
+- **游戏启动自动生成**：NagiBridge mod 在 `OnGameLaunched` 里以子进程跑 `python scripts/extract_keybinds.py`，游戏一启动就重建映射（脚本路径可用 `ModConfig.KeybindsExtractScript` 改）
+- **GMCM 键位能读到**：GMCM 只是改键界面，你在 GMCM 里换键会经 SMAPI `WriteConfig` 写回各 mod 的 config.json（如 GMCM 自己的 `OpenMenuKey: "RightControl"`），所以扫 config.json 就能抓到 GMCM 改过的键
+- mod 目录可用环境变量 `NAGI_MODS_PATH` 指定，默认标准游戏目录
+- AI 工具集新增 `keybind` 工具：查键并返回 `keychain` 字符串，直接喂给 `/key` / `press_key`
+  - 例：`keybind(query='quick stack')` → `Convenient Inventory / QuickStackKeyboardHotkey / keys:["Q"] / keychain:"q"`
+  - 例：`keybind(query='npc map')` → `NPC Map Locations / MinimapToggleKey / keys:["OemPipe"]`
+- `/key` 现在认识 SMAPI 键名（`Back`/`OemPipe`/`LeftControl`/`D6` 等）和组合键（`LeftControl + LeftShift + F6` → `"leftcontrol+leftshift+f6"`）
+- 局限：只能抓到写进 config.json 的键位；通过 GMCM 运行时注册、或非标准存储的，抓不到。
 
 ## 踩坑记录（重要！）
 1. farmhand 的 GetGrabTile 有偏移 → 统一站在目标格上方(y-1)面朝下操作

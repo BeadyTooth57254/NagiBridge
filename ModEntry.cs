@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -39,6 +39,8 @@ public class ModEntry : Mod
     // Pathfinding state
     private Queue<Point>? _pathQueue;
     private int _pathTickCooldown;
+    private string? _followTarget;
+    private int _followTickCooldown;
 
     // Command queue state
     private Queue<Dictionary<string, object?>>? _commandQueue;
@@ -163,6 +165,38 @@ public class ModEntry : Mod
     private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
     {
         StartServer();
+        GenerateKeybindMap();
+    }
+
+    /// <summary>
+    /// At game launch, run the (proven) Python extractor to rebuild mods_keybinds.json,
+    /// so the AI's keybind map reflects the current config (including GMCM-set keys).
+    /// Non-blocking and best-effort: a failure only logs a warning.
+    /// </summary>
+    private void GenerateKeybindMap()
+    {
+        var script = _modConfig?.KeybindsExtractScript;
+        if (string.IsNullOrWhiteSpace(script) || !File.Exists(script))
+        {
+            Monitor.Log("Keybind extractor script not found; skipping map generation.", LogLevel.Info);
+            return;
+        }
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("python", $"\"{script}\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            System.Diagnostics.Process.Start(psi);
+            Monitor.Log("Keybind map generation started at game launch.", LogLevel.Info);
+        }
+        catch (Exception ex)
+        {
+            Monitor.Log($"Keybind map generation failed: {ex.Message}", LogLevel.Warn);
+        }
     }
 
     private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
@@ -374,6 +408,34 @@ public class ModEntry : Mod
             }
 
             CaptureAlerts();
+        }
+
+        // Process follow: keep re-pathing toward the follow target every ~15 ticks
+        if (_followTarget != null && Context.IsWorldReady && Game1.player != null)
+        {
+            if (_followTickCooldown > 0)
+                _followTickCooldown--;
+            else
+            {
+                _followTickCooldown = 15;
+                var followTile = ResolveFollowTile(_followTarget);
+                if (followTile.HasValue)
+                {
+                    var farmer = Game1.player;
+                    var gap = Math.Abs(followTile.Value.X - farmer.TilePoint.X)
+                        + Math.Abs(followTile.Value.Y - farmer.TilePoint.Y);
+                    if (gap > 1)
+                    {
+                        var path = FindPath(farmer.currentLocation, farmer.TilePoint, followTile.Value);
+                        if (path != null && path.Count > 0)
+                        {
+                            _pathQueue = path;
+                            _pathTickCooldown = 0;
+                        }
+                    }
+                }
+                // If the target is elsewhere / gone, keep following (no path) and retry later.
+            }
         }
 
         // Process pathfinding movement
@@ -688,6 +750,7 @@ public class ModEntry : Mod
                 "/alerts" => HandleAlerts(ctx),
                 "/stop" => HandleStop(),
                 "/map" => HandleMap(),
+                "/ctx" => HandleCtx(ctx),
                 "/buy" => HandleBuy(ctx),
                 "/face" => HandleFace(ctx),
                 "/select" => HandleSelect(ctx),
@@ -698,6 +761,9 @@ public class ModEntry : Mod
                 "/key" => HandleKey(ctx),
                 "/warp" => HandleWarp(ctx),
                 "/position" => HandlePosition(ctx),
+                "/follow" => HandleFollow(ctx),
+                "/drop" => HandleDrop(ctx),
+                "/area" => HandleArea(ctx),
                 "/pause" => HandlePause(),
                 "/resume" => HandleResume(),
                 "/give" => HandleGive(ctx),
@@ -918,7 +984,7 @@ public class ModEntry : Mod
             };
 
             if (loc.objects.TryGetValue(tileVec, out var obj))
-                result["object"] = obj.Name;
+                result["object"] = ResolveObjectName(obj);
             if (loc.terrainFeatures.TryGetValue(tileVec, out var tf))
             {
                 result["terrain"] = tf.GetType().Name;
@@ -1149,7 +1215,7 @@ public class ModEntry : Mod
 
                 string? objName = null;
                 if (loc.objects.TryGetValue(tileVec, out var obj))
-                    objName = obj.Name;
+                    objName = ResolveObjectName(obj);
 
                 string? terrainName = null;
                 bool diggable = loc.doesTileHaveProperty(tx, ty, "Diggable", "Back") != null;
@@ -1167,7 +1233,7 @@ public class ModEntry : Mod
                         watered = dirt.state.Value == 1;
                         if (dirt.crop != null)
                         {
-                            cropName = dirt.crop.indexOfHarvest.Value;
+                            cropName = ResolveCropName(dirt.crop);
                             cropPhase = dirt.crop.currentPhase.Value;
                             harvestable = dirt.readyForHarvest();
                         }
@@ -1559,6 +1625,194 @@ public class ModEntry : Mod
         });
 
         return tcs.Task.GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// GET /ctx ?radius=8&grid=true
+    /// Renders the area around the player as a compact text/ASCII map (AI-friendly),
+    /// plus structured tile details. The grid is over [cx-R, cx+R] x [cy-R, cy+R],
+    /// bounded to the current map. Symbols: P player, F other farmer, N npc, M monster,
+    /// B building, o object, c crop, C harvestable crop, t tree, g giant crop, r resource
+    /// clump, # blocked, . open.
+    /// </summary>
+    private object HandleCtx(HttpListenerContext ctx)
+    {
+        if (!Context.IsWorldReady)
+            throw new InvalidOperationException("World not ready");
+
+        var qs = ctx.Request.QueryString;
+        int radius = 8;
+        if (int.TryParse(qs["radius"], out var r) && r > 0 && r <= 20)
+            radius = r;
+
+        var tcs = new TaskCompletionSource<object>();
+        EnqueueMainThread(() =>
+        {
+            var farmer = Game1.player;
+            var loc = farmer.currentLocation;
+            var cx = farmer.TilePoint.X;
+            var cy = farmer.TilePoint.Y;
+            var mapW = loc.Map.DisplayWidth / 64;
+            var mapH = loc.Map.DisplayHeight / 64;
+
+            int x0 = Math.Max(0, cx - radius), x1 = Math.Min(mapW - 1, cx + radius);
+            int y0 = Math.Max(0, cy - radius), y1 = Math.Min(mapH - 1, cy + radius);
+
+            var grid = new StringBuilder((x1 - x0 + 1) * (y1 - y0 + 1));
+            var tiles = new List<object>();
+            var npcs = new List<object>();
+            var monsters = new List<object>();
+            var farmers = new List<object>();
+            var buildings = new List<object>();
+
+            // Building footprints (farm buildings) -> 'B' (blocked)
+            var buildingTiles = new HashSet<Point>();
+            if (loc is Farm farm)
+            {
+                foreach (var b in farm.buildings)
+                    for (int bx = b.tileX.Value; bx < b.tileX.Value + b.tilesWide.Value; bx++)
+                        for (int by = b.tileY.Value; by < b.tileY.Value + b.tilesHigh.Value; by++)
+                            buildingTiles.Add(new Point(bx, by));
+            }
+
+            for (int dy = y0; dy <= y1; dy++)
+            {
+                if (dy > y0) grid.Append('\n');
+                for (int dx = x0; dx <= x1; dx++)
+                {
+                    var tileVec = new Vector2(dx, dy);
+                    var passable = loc.isTilePassable(tileVec);
+
+                    // Look up the tile's object/terrain once (mod-aware names resolved below).
+                    StardewValley.Object? tileObj = null;
+                    loc.objects.TryGetValue(tileVec, out tileObj);
+                    TerrainFeature? tileTf = null;
+                    loc.terrainFeatures.TryGetValue(tileVec, out tileTf);
+
+                    char ch;
+                    if (dx == cx && dy == cy) ch = 'P';
+                    else if (buildingTiles.Contains(new Point(dx, dy))) ch = 'B';
+                    else if (loc.characters.OfType<Monster>().Any(m => m.TilePoint.X == dx && m.TilePoint.Y == dy))
+                        ch = 'M';
+                    else if (loc.characters.Any(n => !(n is Monster) && n.TilePoint.X == dx && n.TilePoint.Y == dy))
+                        ch = 'N';
+                    else if (Game1.getOnlineFarmers().Any(f => f != farmer && f.currentLocation == loc && f.TilePoint.X == dx && f.TilePoint.Y == dy))
+                        ch = 'F';
+                    else if (tileObj != null)
+                        ch = 'o';
+                    else if (tileTf != null)
+                        ch = tileTf switch
+                        {
+                            HoeDirt dirt when dirt.crop != null && dirt.readyForHarvest() => 'C',
+                            HoeDirt when (tileTf as HoeDirt).crop != null => 'c',
+                            Tree => 't',
+                            GiantCrop => 'g',
+                            _ => '.'
+                        };
+                    else if (loc.resourceClumps.Any(c => c.Tile == tileVec
+                        || (dx >= c.Tile.X && dx < c.Tile.X + c.width.Value && dy >= c.Tile.Y && dy < c.Tile.Y + c.height.Value)))
+                        ch = 'r';
+                    else if (!passable) ch = '#';
+                    else ch = '.';
+
+                    grid.Append(ch);
+
+                    // Structured detail for notable tiles (compact)
+                    string? objectName = null, terrainName = null, cropName = null, resourceName = null;
+                    bool harvestable = false;
+                    if (tileObj != null)
+                        objectName = ResolveObjectName(tileObj);
+                    if (tileTf != null)
+                    {
+                        terrainName = tileTf.GetType().Name;
+                        if (tileTf is HoeDirt dirt && dirt.crop != null)
+                        {
+                            cropName = ResolveCropName(dirt.crop);
+                            harvestable = dirt.readyForHarvest();
+                        }
+                    }
+                    var clump = loc.resourceClumps.FirstOrDefault(c => c.Tile == tileVec
+                        || (dx >= c.Tile.X && dx < c.Tile.X + c.width.Value && dy >= c.Tile.Y && dy < c.Tile.Y + c.height.Value));
+                    if (clump != null) resourceName = clump.parentSheetIndex.Value switch
+                    {
+                        600 => "LargeStump", 602 => "LargeLog", 622 => "MeteoriteOre",
+                        672 or 752 or 754 => "LargeBoulder", _ => $"Clump:{clump.parentSheetIndex.Value}"
+                    };
+                    if (objectName != null || cropName != null || resourceName != null || terrainName != null)
+                    {
+                        var d = new Dictionary<string, object?> { ["x"] = dx, ["y"] = dy };
+                        if (objectName != null) d["object"] = objectName;
+                        if (terrainName != null) d["terrain"] = terrainName;
+                        if (cropName != null) { d["crop"] = cropName; d["harvestable"] = harvestable; }
+                        if (resourceName != null) d["resource"] = resourceName;
+                        tiles.Add(d);
+                    }
+                }
+            }
+
+            foreach (var n in loc.characters.Where(n => !(n is Monster)
+                && n.TilePoint.X >= x0 && n.TilePoint.X <= x1 && n.TilePoint.Y >= y0 && n.TilePoint.Y <= y1))
+                npcs.Add(new { name = n.Name, x = n.TilePoint.X, y = n.TilePoint.Y });
+            foreach (var m in loc.characters.OfType<Monster>()
+                .Where(m => m.TilePoint.X >= x0 && m.TilePoint.X <= x1 && m.TilePoint.Y >= y0 && m.TilePoint.Y <= y1))
+                monsters.Add(new { name = m.Name, x = m.TilePoint.X, y = m.TilePoint.Y, health = m.Health, maxHealth = m.MaxHealth });
+            foreach (var f in Game1.getOnlineFarmers()
+                .Where(f => f != farmer && f.currentLocation == loc
+                    && f.TilePoint.X >= x0 && f.TilePoint.X <= x1 && f.TilePoint.Y >= y0 && f.TilePoint.Y <= y1))
+                farmers.Add(new { name = f.Name, x = f.TilePoint.X, y = f.TilePoint.Y });
+            if (loc is Farm f2)
+                foreach (var b in f2.buildings)
+                    buildings.Add(new { type = b.buildingType.Value, x = b.tileX.Value, y = b.tileY.Value });
+
+            tcs.SetResult(new
+            {
+                ok = true,
+                location = loc.Name,
+                mapWidth = mapW,
+                mapHeight = mapH,
+                center = new { x = cx, y = cy },
+                origin = new { x = x0, y = y0 },
+                radius,
+                legend = "P player, F other farmer, N npc, M monster, B building, o object, c crop, C harvestable, t tree, g giant crop, r resource clump, # blocked, . open",
+                grid = grid.ToString(),
+                tiles,
+                npcs,
+                monsters,
+                farmers,
+                buildings
+            });
+        });
+
+        return tcs.Task.GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Best-effort display name for a placed object, falling back to its raw Name.
+    /// </summary>
+    private static string ResolveObjectName(StardewValley.Object obj)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(obj.DisplayName)) return obj.DisplayName;
+            return obj.Name;
+        }
+        catch { return obj.Name; }
+    }
+
+    /// <summary>
+    /// Resolve a crop's harvest item to its display name (vanilla and modded crops),
+    /// falling back to the harvest index string.
+    /// </summary>
+    private static string ResolveCropName(Crop crop)
+    {
+        try
+        {
+            string hay = crop.indexOfHarvest.Value; // item id (numeric string or qualified)
+            var qid = int.TryParse(hay, out _) ? "(O)" + hay : hay;
+            var item = ItemRegistry.Create(qid);
+            return item?.Name ?? hay;
+        }
+        catch { return crop.indexOfHarvest.Value.ToString(); }
     }
 
     /// <summary>
@@ -2000,26 +2254,73 @@ public class ModEntry : Mod
                             }
                             break;
                         default:
-                            byte? virtualKey = null;
-                            if (key.ToLower().StartsWith("f") && int.TryParse(key.Substring(1), out int fNum) && fNum >= 1 && fNum <= 12)
-                                virtualKey = (byte)(0x70 + fNum - 1);
-                            else if (key.Equals("space", StringComparison.OrdinalIgnoreCase)) virtualKey = 0x20;
-                            else if (key.Equals("enter", StringComparison.OrdinalIgnoreCase)) virtualKey = 0x0D;
-                            else if (key.Equals("up", StringComparison.OrdinalIgnoreCase)) virtualKey = 0x26;
-                            else if (key.Equals("down", StringComparison.OrdinalIgnoreCase)) virtualKey = 0x28;
-                            else if (key.Equals("left", StringComparison.OrdinalIgnoreCase)) virtualKey = 0x25;
-                            else if (key.Equals("right", StringComparison.OrdinalIgnoreCase)) virtualKey = 0x27;
-                            else if (key.Equals("w", StringComparison.OrdinalIgnoreCase)) virtualKey = 0x57;
-                            else if (key.Equals("a", StringComparison.OrdinalIgnoreCase)) virtualKey = 0x41;
-                            else if (key.Equals("s", StringComparison.OrdinalIgnoreCase)) virtualKey = 0x53;
-                            else if (key.Equals("d", StringComparison.OrdinalIgnoreCase)) virtualKey = 0x44;
-                            if (virtualKey.HasValue)
+                            // Support optional modifier chords like "shift+enter", "ctrl+r", "alt+1".
+                            var parts = key.Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                            if (parts.Length == 0)
                             {
-                                if (Game1.currentMinigame != null && Enum.TryParse<Keys>(key, true, out var xnaKey))
-                                    Game1.currentMinigame.receiveKeyPress(xnaKey);
-                                keybd_event(virtualKey.Value, 0, 0, UIntPtr.Zero);
+                                tcs.SetResult(new { ok = false, error = $"Unsupported key: {key}" });
+                                return;
+                            }
+                            var mainKey = parts[^1];
+                            var vk = KeyToVirtualKey(mainKey);
+                            if (!vk.HasValue)
+                            {
+                                tcs.SetResult(new { ok = false, error = $"Unsupported key: {key}" });
+                                return;
+                            }
+                            if (parts.Length > 1)
+                            {
+                                // Modifier chord: press modifiers down, main key, then release.
+                                var mods = new List<byte>();
+                                bool valid = true;
+                                foreach (var m in parts.Take(parts.Length - 1))
+                                {
+                                    var mv = m.ToLowerInvariant() switch
+                                    {
+                                        "ctrl" or "control" or "leftctrl" or "rightctrl"
+                                            or "leftcontrol" or "rightcontrol" => (byte)0x11,
+                                        "shift" or "leftshift" or "rightshift" => (byte)0x10,
+                                        "alt" or "leftalt" or "rightalt" => (byte)0x12,
+                                        "win" or "windows" or "cmd" => (byte)0x5B,
+                                        _ => (byte)0
+                                    };
+                                    if (mv == 0) { valid = false; break; }
+                                    mods.Add(mv);
+                                }
+                                if (!valid)
+                                {
+                                    tcs.SetResult(new { ok = false, error = $"Unsupported modifier in key: {key}" });
+                                    return;
+                                }
+                                foreach (var mv in mods) keybd_event(mv, 0, 0, UIntPtr.Zero);
+                                System.Threading.Thread.Sleep(30);
+                                keybd_event(vk.Value, 0, 0, UIntPtr.Zero);
+                                System.Threading.Thread.Sleep(40);
+                                keybd_event(vk.Value, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                                System.Threading.Thread.Sleep(30);
+                                for (int mi = mods.Count - 1; mi >= 0; mi--)
+                                {
+                                    keybd_event(mods[mi], 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                                    System.Threading.Thread.Sleep(20);
+                                }
+                            }
+                            else
+                            {
+                                // Plain key: OS-level injection (covers most mod keybinds listening to
+                                // Game1.input / key events), then forward to an active minigame/menu.
+                                if (Game1.currentMinigame != null)
+                                {
+                                    var mk = ParseXnaKey(mainKey);
+                                    if (mk.HasValue) Game1.currentMinigame.receiveKeyPress(mk.Value);
+                                }
+                                else if (Game1.activeClickableMenu != null)
+                                {
+                                    var mk = ParseXnaKey(mainKey);
+                                    if (mk.HasValue) Game1.activeClickableMenu.receiveKeyPress(mk.Value);
+                                }
+                                keybd_event(vk.Value, 0, 0, UIntPtr.Zero);
                                 System.Threading.Thread.Sleep(50);
-                                keybd_event(virtualKey.Value, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                                keybd_event(vk.Value, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
                             }
                             break;
                     }
@@ -2034,7 +2335,249 @@ public class ModEntry : Mod
         return tcs.Task.GetAwaiter().GetResult();
     }
 
+    /// <summary>
+    /// Map a key string to a Windows virtual-key code (VK). Handles single letters,
+    /// digits, printable ASCII, named keys, and F1-F24. Returns null if unknown.
     /// </summary>
+    private static byte? KeyToVirtualKey(string keyRaw)
+    {
+        if (string.IsNullOrWhiteSpace(keyRaw)) return null;
+        var key = keyRaw.Trim();
+
+        // F1-F24
+        if (key.Length >= 2 && (key[0] == 'F' || key[0] == 'f'))
+        {
+            if (int.TryParse(key.Substring(1), out var f) && f >= 1 && f <= 24)
+                return (byte)(0x70 + f - 1);
+        }
+
+        // SMAPI digit keys: D0-D9 and NumPad0-9 / numpad operators
+        if (key.Length == 2 && (key[0] == 'D' || key[0] == 'd') && char.IsDigit(key[1]))
+            return (byte)(0x30 + (key[1] - '0'));
+        if (key.StartsWith("NumPad", StringComparison.OrdinalIgnoreCase))
+        {
+            if (int.TryParse(key.Substring(6), out var np) && np >= 0 && np <= 9)
+                return (byte)(0x60 + np);
+            return key.ToLowerInvariant() switch
+            {
+                "numpadplus" => 0x6B, "numpadminus" => 0x6D, "numpadmultiply" => 0x6A,
+                "numpaddivide" => 0x6F, "numpaddecimal" => 0x6E, _ => null
+            };
+        }
+
+        // Single printable ASCII char -> VK (letters / digits / punctuation)
+        if (key.Length == 1)
+        {
+            char c = key[0];
+            if (c >= 'a' && c <= 'z') return (byte)(char.ToUpperInvariant(c));
+            if (c >= 'A' && c <= 'Z') return (byte)c;
+            if (c >= '0' && c <= '9') return (byte)c;
+            return c switch
+            {
+                ' ' => 0x20,
+                '\r' or '\n' or '\t' => 0x0D,
+                ',' => 0xBC, '.' => 0xBE, '/' => 0xBF, ';' => 0xBA, '\'' => 0xDE,
+                '[' => 0xDB, ']' => 0xDD, '\\' => 0xDC, '-' => 0xBD, '=' => 0xBB,
+                '`' => 0xC0,
+                _ => null
+            };
+        }
+
+        // Named keys (Windows names + SMAPI SButton names, case-insensitive)
+        return key.ToLowerInvariant() switch
+        {
+            "enter" or "return" => 0x0D,
+            "esc" or "escape" => 0x1B,
+            "space" => 0x20,
+            "tab" => 0x09,
+            "back" or "backspace" => 0x08,
+            "up" => 0x26,
+            "down" => 0x28,
+            "left" => 0x25,
+            "right" => 0x27,
+            "home" => 0x24,
+            "end" => 0x23,
+            "pageup" or "pgup" => 0x21,
+            "pagedown" or "pgdn" => 0x22,
+            "insert" or "ins" => 0x2D,
+            "delete" or "del" => 0x2E,
+            "capslock" => 0x14,
+            "scrolllock" => 0x91,
+            "pause" => 0x13,
+            // SMAPI Oem / punctuation names
+            "oemcomma" or "comma" => 0xBC,
+            "oemperiod" or "period" => 0xBE,
+            "oemquestion" or "slash" => 0xBF,
+            "oemsemicolon" or "semicolon" => 0xBA,
+            "oemquotes" or "apostrophe" => 0xDE,
+            "oemopenbrackets" => 0xDB,
+            "oemclosebrackets" => 0xDD,
+            "oempipe" or "backslash" or "oembackslash" => 0xDC,
+            "oemminus" or "minus" => 0xBD,
+            "oemplus" or "equals" => 0xBB,
+            "oemtilde" or "grave" => 0xC0,
+            "oem8" => 0xDF,
+            // Modifiers are also valid alone as a main key (e.g. GMCM open-menu = RightControl)
+            "ctrl" or "control" or "leftctrl" or "rightctrl" or "leftcontrol" or "rightcontrol" => 0x11,
+            "shift" or "leftshift" or "rightshift" => 0x10,
+            "alt" or "leftalt" or "rightalt" => 0x12,
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Resolve a key string to an XNA Keys value for forwarding to a minigame/menu.
+    /// Tries the XNA enum name first, then derives D0-D9 and letter keys.
+    /// </summary>
+    private static Keys? ParseXnaKey(string key)
+    {
+        if (key.Length == 1 && char.IsDigit(key[0]))
+            return (Keys)((int)Keys.D0 + (key[0] - '0'));
+        return Enum.TryParse<Keys>(key, true, out var k) ? k : null;
+    }
+
+    /// </summary>
+    /// <summary>
+    /// POST /drop  { }
+    /// Drops the currently held item on the ground next to the farmer.
+    /// </summary>
+    private object HandleDrop(HttpListenerContext ctx)
+    {
+        if (!Context.IsWorldReady)
+            throw new InvalidOperationException("World not ready");
+
+        var tcs = new TaskCompletionSource<object>();
+        EnqueueMainThread(() =>
+        {
+            try
+            {
+                var farmer = Game1.player;
+                var item = farmer.CurrentItem;
+                if (item == null)
+                {
+                    tcs.SetResult(new { ok = false, error = "Nothing held to drop" });
+                    return;
+                }
+                var name = item.Name;
+                farmer.removeItemFromInventory(item);
+                Game1.createItemDebris(item, farmer.getStandingPosition(), farmer.FacingDirection);
+                tcs.SetResult(new { ok = true, dropped = name });
+            }
+            catch (Exception ex)
+            {
+                tcs.SetResult(new { ok = false, error = ex.Message });
+            }
+        });
+        return tcs.Task.GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// POST /area  { "op": "water"|"unwater", "x1", "y1", "x2", "y2" }
+    /// Batch-op over a tile box. water/unwater sets every HoeDirt tile's watered state
+    /// in the box directly (no walking / stamina cost). Modded crops on HoeDirt are fine.
+    /// </summary>
+    private object HandleArea(HttpListenerContext ctx)
+    {
+        var p = ReadJson(ctx);
+        var op = GetParamOr(p, "op", "water");
+        var x1 = GetParam<int>(p, "x1");
+        var y1 = GetParam<int>(p, "y1");
+        var x2 = GetParam<int>(p, "x2");
+        var y2 = GetParam<int>(p, "y2");
+
+        if (!Context.IsWorldReady)
+            throw new InvalidOperationException("World not ready");
+
+        var tcs = new TaskCompletionSource<object>();
+        EnqueueMainThread(() =>
+        {
+            try
+            {
+                var loc = Game1.player.currentLocation;
+                int affected = 0;
+                int xa = Math.Min(x1, x2), xb = Math.Max(x1, x2);
+                int ya = Math.Min(y1, y2), yb = Math.Max(y1, y2);
+                for (int x = xa; x <= xb; x++)
+                {
+                    for (int y = ya; y <= yb; y++)
+                    {
+                        if (loc.terrainFeatures.TryGetValue(new Vector2(x, y), out var tf)
+                            && tf is HoeDirt dirt)
+                        {
+                            if (op == "water" && dirt.state.Value != 1)
+                            {
+                                dirt.state.Value = 1;
+                                affected++;
+                            }
+                            else if (op == "unwater" && dirt.state.Value != 0)
+                            {
+                                dirt.state.Value = 0;
+                                affected++;
+                            }
+                        }
+                    }
+                }
+                tcs.SetResult(new { ok = true, op, affected,
+                    box = new { x1 = xa, y1 = ya, x2 = xb, y2 = yb } });
+            }
+            catch (Exception ex)
+            {
+                tcs.SetResult(new { ok = false, error = ex.Message });
+            }
+        });
+        return tcs.Task.GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// POST /follow  { "target": "player:Es" | "npc:Abigail" | "x,y" }  or  { "target": "" } to stop
+    /// Auto-follows a farmer/NPC/coordinate by re-pathing toward it each tick.
+    /// </summary>
+    private object HandleFollow(HttpListenerContext ctx)
+    {
+        if (!Context.IsWorldReady)
+            throw new InvalidOperationException("World not ready");
+
+        var p = ReadJson(ctx);
+        var target = p.TryGetValue("target", out var t) ? t?.ToString() : null;
+        EnqueueMainThread(() =>
+        {
+            _followTarget = string.IsNullOrWhiteSpace(target) ? null : target;
+            _followTickCooldown = 0;
+            if (_followTarget == null)
+            {
+                _pathQueue = null;
+                _pathTickCooldown = 0;
+            }
+        });
+        return new { ok = true, follow = string.IsNullOrWhiteSpace(target) ? null : target };
+    }
+
+    private Point? ResolveFollowTile(string target)
+    {
+        var farmer = Game1.player;
+        if (farmer == null) return null;
+
+        if (target.StartsWith("player:", StringComparison.OrdinalIgnoreCase))
+        {
+            var name = target.Substring(7).Trim();
+            var other = Game1.getOnlineFarmers()
+                .FirstOrDefault(f => f != farmer && f.currentLocation == farmer.currentLocation
+                    && f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            return other?.TilePoint;
+        }
+        if (target.StartsWith("npc:", StringComparison.OrdinalIgnoreCase))
+        {
+            var name = target.Substring(4).Trim();
+            var npc = farmer.currentLocation.characters
+                .FirstOrDefault(n => !(n is Monster) && n.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            return npc?.TilePoint;
+        }
+        var parts = target.Split(',');
+        if (parts.Length == 2 && int.TryParse(parts[0], out var x) && int.TryParse(parts[1], out var y))
+            return new Point(x, y);
+        return null;
+    }
+
     private object HandleQueue(HttpListenerContext ctx)
     {
         if (!Context.IsWorldReady)
@@ -2887,7 +3430,7 @@ public class ModEntry : Mod
 
                     var entry = new Dictionary<string, object?>
                     {
-                        ["name"] = obj.Name,
+                        ["name"] = ResolveObjectName(obj),
                         ["x"] = (int)pair.Key.X,
                         ["y"] = (int)pair.Key.Y,
                         ["status"] = status,
@@ -3262,7 +3805,9 @@ public class ModEntry : Mod
     {
         if (start == end) return new Queue<Point>();
 
-        var maxSteps = 500;
+        var maxSteps = Math.Min(
+            Math.Max(500, (location.Map.DisplayWidth / 64) * (location.Map.DisplayHeight / 64)),
+            20000);
         var visited = new HashSet<Point> { start };
         var queue = new Queue<(Point pos, List<Point> path)>();
         queue.Enqueue((start, new List<Point>()));
