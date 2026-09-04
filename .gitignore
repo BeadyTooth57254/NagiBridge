@@ -5,3 +5,4 @@ __pycache__/
 *.pdb
 node_modules/
 chat_outbox.txt
+mcp_bridge/token.txt

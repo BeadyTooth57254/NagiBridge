@@ -24,19 +24,29 @@ import os
 import uuid
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("nagibridge.mcp")
 
-TOKEN = os.environ.get("NAGI_BRIDGE_TOKEN", "changeme")
+# Strip whitespace/CRLF so a token read from a batch file (token.txt) always matches cleanly.
+TOKEN = os.environ.get("NAGI_BRIDGE_TOKEN", "changeme").strip()
 # MCP auth is ON by default: /mcp requires `Authorization: Bearer <token>`.
 # Set NAGI_BRIDGE_MCP_AUTH=0 to disable (only if you trust the network).
 REQUIRE_MCP_AUTH = os.environ.get("NAGI_BRIDGE_MCP_AUTH", "1") == "1"
 PORT = int(os.environ.get("PORT", "8000"))
 
-mcp = FastMCP("NagiBridge Game Control")
+# FastMCP enables DNS-rebinding protection by default when it thinks it's on a
+# loopback host, which only allows Host headers of 127.0.0.1/localhost/::1 and
+# 421s anything else (e.g. a phone connecting via the PC's LAN IP). The Bearer
+# token on /mcp is the real gate, so disable that Host-header allowlist so the
+# bridge accepts the LAN IP (and any hostname) that the phone uses.
+mcp = FastMCP(
+    "NagiBridge Game Control",
+    transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
+)
 
 # ── reverse-tunnel state ──
 _pc_ws = None

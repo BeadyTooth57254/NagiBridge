@@ -2,7 +2,7 @@
   "Name": "NagiBridge",
   "Author": "Nagi",
   "Version": "1.0.0",
-  "Description": "HTTP bridge server (port 7842) for external control of farmhand character.",
+  "Description": "HTTP/MCP bridge for in-game AI chat and external control of a co-op farmhand.",
   "UniqueID": "Nagi.NagiBridge",
   "EntryDll": "NagiBridge.dll",
   "MinimumApiVersion": "3.0.0",

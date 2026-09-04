@@ -11,8 +11,8 @@
 
 游戏只跑在你电脑上，桥只负责转发。**你在家、手机和电脑同一 Wi-Fi** → 用局域网模式，零云开销；**人不在家** → 用云端模式，手机走公网到你的桥再下到电脑。
 
-- **`server.py`**：桥。暴露 15 个工具 + `/tunnel` 隧道 + `/health`。绑定 `0.0.0.0`，局域网和云端都能用。
-- **`client.py`**：电脑端常驻。可连**多个**桥（逗号分隔），把手机发来的方法转成游戏 HTTP 调用(`http://127.0.0.1:58331`)。
+- **`server.py`**：桥。暴露 17 个工具 + `/tunnel` 隧道 + `/health`。绑定 `0.0.0.0`，局域网和云端都能用。
+- **`client.py`**：电脑端常驻。可连**多个**桥（逗号分隔），把手机发来的方法转成游戏 HTTP 调用：AI 控制走 **farmhand**(`NAGI_GAME_URL`，默认 `http://localhost:58332`)，聊天回推走 **host**(`NAGI_HOST_URL`，默认 `http://localhost:58331`)。
 
 ---
 
@@ -49,7 +49,8 @@ python server.py
 
 # ② 电脑上起客户端（连本机桥）
 $env:NAGI_BRIDGE_TOKEN='你的强密钥'
-$env:NAGI_GAME_URL='http://127.0.0.1:58331'      # 游戏内 NagiBridge 的 HTTP 端口
+$env:NAGI_GAME_URL='http://localhost:58332'      # farmhand (AI 控的)
+$env:NAGI_HOST_URL='http://localhost:58331'      # host (游戏内聊天回推)
 python client.py
 ```
 
@@ -68,7 +69,7 @@ Windows 防火墙放行 TCP 8000。手机和电脑在同一 Wi-Fi 即可。
 ```pwsh
 $env:NAGI_BRIDGE_TOKEN='你的强密钥'
 $env:NAGI_BRIDGE_URLS='wss://<your-app>/tunnel'
-$env:NAGI_GAME_URL='http://127.0.0.1:58331'
+$env:NAGI_GAME_URL='http://localhost:58332'      # farmhand (AI 控的)
 python client.py
 ```
 3. **operit** 填 `https://<your-app>/mcp`（streamable HTTP），鉴权 Bearer Token 值填 `NAGI_BRIDGE_TOKEN`。
@@ -82,7 +83,7 @@ python client.py
 ```pwsh
 $env:NAGI_BRIDGE_TOKEN='你的强密钥'
 $env:NAGI_BRIDGE_URLS='ws://127.0.0.1:8000/tunnel,wss://<your-app>/tunnel'   # local + cloud
-$env:NAGI_GAME_URL='http://127.0.0.1:58331'
+$env:NAGI_GAME_URL='http://localhost:58332'      # farmhand (AI 控的)
 python client.py
 ```
 
@@ -98,8 +99,8 @@ python client.py
 | `NAGI_LAN_IP`（server） | 覆盖自动探测的局域网 IP（VPN/多网卡/无外网时用） | 自动探测 |
 | `NAGI_BRIDGE_TOKEN` | 共享密钥，server/client 一致 | changeme（必改） |
 | `NAGI_BRIDGE_URLS`（client） | 逗号分隔的桥地址（可多个） | `ws://127.0.0.1:8000/tunnel` |
-| `NAGI_GAME_URL`（client） | farmhand（AI 控的）游戏 HTTP API | `http://127.0.0.1:58332` |
-| `NAGI_HOST_URL`（client） | host（玩家玩的）游戏 HTTP API，用于游戏内聊天回推 | `http://127.0.0.1:58331` |
+| `NAGI_GAME_URL`（client） | farmhand（AI 控的）游戏 HTTP API | `http://localhost:58332` |
+| `NAGI_HOST_URL`（client） | host（玩家玩的）游戏 HTTP API，用于游戏内聊天回推 | `http://localhost:58331` |
 | `NAGI_MODS_JSON`（client） | 键位映射文件 | `../scripts/mods_keybinds.json` |
 | `NAGI_BRIDGE_MCP_AUTH`（server） | 是否要求 `/mcp` 带 `Authorization: Bearer <token>` | **开**（`1`） |
 
@@ -115,7 +116,7 @@ python client.py
 
 ## 本地验证（不用游戏）
 
-- **工具链路**：三个终端，分别跑 `mock_game.py`、`server.py`（`NAGI_BRIDGE_TOKEN=t`）、`client.py`（连 `ws://127.0.0.1:8000/tunnel`，`NAGI_GAME_URL=http://127.0.0.1:58332`），再用任意 MCP 客户端连 `http://127.0.0.1:8000/mcp`，可看到工具并调用。
+- **工具链路**：三个终端，分别跑 `mock_game.py`、`server.py`（`NAGI_BRIDGE_TOKEN=t`）、`client.py`（连 `ws://127.0.0.1:8000/tunnel`，`NAGI_GAME_URL=http://localhost:58332`），再用任意 MCP 客户端连 `http://127.0.0.1:8000/mcp`，可看到工具并调用。
 - **游戏内聊天往返**：直接跑 `python test_chat_loop.py`，会用一个模拟 host 游戏把整条「`/ingame-in` → `read_ingame` → `send_ingame` → host `/chat/push`」走一遍。见到 `ALL OK` 即通。
 
 ## 加工具

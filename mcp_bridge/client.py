@@ -7,8 +7,8 @@ token, and answers tool calls by mapping them to the game's NagiBridge HTTP API
 Env:
     NAGI_BRIDGE_URL       e.g. wss://<your-zeabur-url>/tunnel  (default ws://localhost:8000/tunnel)
     NAGI_BRIDGE_TOKEN     shared secret, must match the server
-    NAGI_GAME_URL         farmhand game HTTP API (default http://127.0.0.1:58332)
-    NAGI_HOST_URL         host game HTTP API for in-game chat pushes (default http://127.0.0.1:58331)
+    NAGI_GAME_URL         farmhand game HTTP API (default http://localhost:58332)
+    NAGI_HOST_URL         host game HTTP API for in-game chat pushes (default http://localhost:58331)
     NAGI_MODS_JSON        path to mods_keybinds.json (default ../scripts/mods_keybinds.json)
 """
 import asyncio
@@ -33,9 +33,9 @@ BRIDGE_URLS = [u.strip() for u in os.environ.get(
     "NAGI_BRIDGE_URLS",
     os.environ.get("NAGI_BRIDGE_URL", "ws://127.0.0.1:8000/tunnel"),
 ).split(",") if u.strip()]
-TOKEN = os.environ.get("NAGI_BRIDGE_TOKEN", "changeme")
-GAME_URL = os.environ.get("NAGI_GAME_URL", "http://127.0.0.1:58332")  # farmhand (AI-controlled) game
-HOST_URL = os.environ.get("NAGI_HOST_URL", "http://127.0.0.1:58331")  # host (player) game, for in-game chat pushes
+TOKEN = os.environ.get("NAGI_BRIDGE_TOKEN", "changeme").strip()
+GAME_URL = os.environ.get("NAGI_GAME_URL", "http://localhost:58332")  # farmhand (AI-controlled) game
+HOST_URL = os.environ.get("NAGI_HOST_URL", "http://localhost:58331")  # host (player) game, for in-game chat pushes
 MODS_JSON = os.environ.get(
     "NAGI_MODS_JSON",
     os.path.normpath(os.path.join(_DIR, "..", "scripts", "mods_keybinds.json")),

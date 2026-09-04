@@ -762,7 +762,11 @@ public class ModEntry : Mod
                 try
                 {
                     var listener = new HttpListener();
-                    listener.Prefixes.Add($"http://+:{tryPort}/");
+                    // Bind to "localhost": unlike `http://+` (needs an admin URLACL per port) and
+                    // `http://127.0.0.1` (rejected on ports that already have a URLACL, e.g. the host
+                    // port), `http://localhost` needs no URLACL on ANY port. The PC client connects to
+                    // us via http://localhost:<port> so the Host header matches.
+                    listener.Prefixes.Add($"http://localhost:{tryPort}/");
                     listener.Start();
                     _listener = listener;
                     _port = tryPort;

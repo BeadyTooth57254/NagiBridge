@@ -5,6 +5,8 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Deploy to the actual mod folder Es uses (renamed from the default "NagiBridge"). -->
+    <ModFolderName>[AI聊天]NagiBridge</ModFolderName>
   </PropertyGroup>
 
   <ItemGroup>
