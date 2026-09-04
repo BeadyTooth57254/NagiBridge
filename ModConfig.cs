@@ -13,4 +13,16 @@ public class ModConfig
 
     /// <summary>Path to extract_keybinds.py, run at game launch to rebuild the mod keybind map.</summary>
     public string KeybindsExtractScript { get; set; } = @"C:\Users\lenovo\Desktop\NagiBridge\scripts\extract_keybinds.py";
+
+    /// <summary>Port the HOST instance binds (IsMainPlayer == true).</summary>
+    public int HostPort { get; set; } = 58331;
+
+    /// <summary>Port the FARMHAND instance binds (IsMainPlayer == false, i.e. a co-op join).</summary>
+    public int FarmhandPort { get; set; } = 58332;
+
+    /// <summary>Bridge base URL that the in-game chat panel forwards the player's messages to (LAN default http://127.0.0.1:8000).</summary>
+    public string OperitBridgeUrl { get; set; } = "http://127.0.0.1:8000";
+
+    /// <summary>Shared token sent to the bridge for in-game chat forwarding (leave empty if the bridge has none).</summary>
+    public string OperitBridgeToken { get; set; } = "";
 }

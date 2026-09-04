@@ -35,6 +35,9 @@ public class ModEntry : Mod
     private readonly Queue<Action> _mainThreadQueue = new();
     private readonly object _queueLock = new();
     private int _port;
+    private bool _serverStarted;
+    private bool _isHost = true;
+    private string _roleLabel = "HOST";
 
     // Pathfinding state
     private Queue<Point>? _pathQueue;
@@ -124,7 +127,15 @@ public class ModEntry : Mod
         {
             try
             {
-                if (_modConfig!.Mode.Equals("cc", StringComparison.OrdinalIgnoreCase))
+                if (_modConfig!.Mode.Equals("operit", StringComparison.OrdinalIgnoreCase))
+                {
+                    // config.json is shared between the two co-op instances — so gate here by role:
+                    // only the HOST (main player) is the human chat channel; the farmhand is driven
+                    // by the AI via tools, never by this panel, and must not forward.
+                    if (Game1.player?.IsMainPlayer == true)
+                        await SendToOperit(text);
+                }
+                else if (_modConfig.Mode.Equals("cc", StringComparison.OrdinalIgnoreCase))
                 {
                     using var client = new HttpClient();
                     var json = JsonSerializer.Serialize(new { message = text });
@@ -142,6 +153,36 @@ public class ModEntry : Mod
                 Monitor.Log($"Chat send error: {ex.Message}", LogLevel.Debug);
             }
         });
+    }
+
+    // Forward the player's in-game chat message to the bridge so the phone AI (operit) can see it.
+    // The AI replies via /chat/push (send_ingame), which lands back in this chat panel.
+    private async Task SendToOperit(string text)
+    {
+        try
+        {
+            using var client = new HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(8);
+            var json = JsonSerializer.Serialize(new
+            {
+                sender = Game1.player?.Name ?? "Player",
+                message = text,
+            });
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var req = new HttpRequestMessage(HttpMethod.Post, _modConfig!.OperitBridgeUrl.TrimEnd('/') + "/ingame-in")
+            {
+                Content = content,
+            };
+            if (!string.IsNullOrEmpty(_modConfig.OperitBridgeToken))
+                req.Headers.TryAddWithoutValidation("x-token", _modConfig.OperitBridgeToken);
+            using var resp = await client.SendAsync(req);
+            if (!resp.IsSuccessStatusCode)
+                Monitor.Log($"Operit forward failed: HTTP {(int)resp.StatusCode}", LogLevel.Warn);
+        }
+        catch (Exception ex)
+        {
+            Monitor.Log($"Operit forward error: {ex.Message}", LogLevel.Debug);
+        }
     }
 
     private void OnRenderedHud(object? sender, RenderedHudEventArgs e)
@@ -164,7 +205,6 @@ public class ModEntry : Mod
 
     private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
     {
-        StartServer();
         GenerateKeybindMap();
     }
 
@@ -201,6 +241,7 @@ public class ModEntry : Mod
 
     private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
     {
+        StopServer();
         ClearMovementState();
     }
 
@@ -362,6 +403,9 @@ public class ModEntry : Mod
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
     {
         _chatHud?.Update();
+
+        // Start the HTTP server as soon as we're in a session, with a role-aware port.
+        EnsureServerStarted();
 
         // Drain main-thread action queue
         lock (_queueLock)
@@ -682,35 +726,60 @@ public class ModEntry : Mod
         catch { return false; }
     }
 
-    private void StartServer()
+    private void EnsureServerStarted()
+    {
+        if (_serverStarted || _cts != null) return;
+        if (!Context.IsWorldReady) return; // wait until we're inside a session
+
+        bool isHost = Game1.player?.IsMainPlayer ?? true;
+        int targetPort = isHost ? (_modConfig?.HostPort ?? 58331) : (_modConfig?.FarmhandPort ?? 58332);
+        _serverStarted = true;
+        _isHost = isHost;
+        StartServer(targetPort, isHost);
+    }
+
+    private void StopServer()
+    {
+        _serverStarted = false;
+        try { _cts?.Cancel(); } catch { }
+        _cts = null;
+        try { _listener?.Close(); } catch { }
+        _listener = null;
+    }
+
+    private void StartServer(int targetPort, bool isHost)
     {
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
 
         Task.Run(async () =>
         {
-            // Auto-detect available port starting from 58331
+            // Bind the role port, falling back to the next few if it's somehow taken.
             _listener = null;
-            for (_port = 58331; _port < 58339; _port++)
+            for (int attempt = 0; attempt < 5; attempt++)
             {
+                int tryPort = targetPort + attempt;
                 try
                 {
                     var listener = new HttpListener();
-                    listener.Prefixes.Add($"http://+:{_port}/");
+                    listener.Prefixes.Add($"http://+:{tryPort}/");
                     listener.Start();
                     _listener = listener;
-                    Monitor.Log($"NagiBridge HTTP server started on port {_port}", LogLevel.Info);
+                    _port = tryPort;
+                    string role = isHost ? "HOST" : "FARMHAND";
+                    _roleLabel = role;
+                    Monitor.Log($"NagiBridge running as {role} on port {tryPort}", LogLevel.Info);
                     break;
                 }
                 catch
                 {
-                    Monitor.Log($"Port {_port} unavailable, trying next...", LogLevel.Debug);
+                    Monitor.Log($"Port {tryPort} unavailable, trying next...", LogLevel.Debug);
                 }
             }
 
             if (_listener == null)
             {
-                Monitor.Log("Failed to start HTTP server on any port (58331-58338)", LogLevel.Error);
+                Monitor.Log($"Failed to bind port {targetPort} (and the next few). Change HostPort/FarmhandPort in config.json.", LogLevel.Error);
                 return;
             }
 
@@ -864,6 +933,8 @@ public class ModEntry : Mod
             server = "NagiBridge",
             version = "1.0.0",
             port = _port,
+            role = _roleLabel,
+            isHost = _isHost,
             worldReady = Context.IsWorldReady,
             isMultiplayer = Context.IsMultiplayer
         };

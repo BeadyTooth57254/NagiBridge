@@ -42,6 +42,8 @@ mcp = FastMCP("NagiBridge Game Control")
 _pc_ws = None
 _pc_lock = asyncio.Lock()
 _pending = {}  # call_id -> asyncio.Future
+_ingame_inbox = []  # in-game chat messages sent by the host game (player -> phone)
+_ingame_lock = asyncio.Lock()
 
 
 async def _call_pc(method: str, args: dict, timeout: float = 25.0):
@@ -160,6 +162,22 @@ async def warp(location: str, x: int = 0, y: int = 0) -> str:
     return await _tool("warp", {"location": location, "x": x, "y": y})
 
 
+@mcp.tool()
+async def read_ingame() -> str:
+    """Read any in-game chat messages the player typed in Stardew (from the host game's Nagi chat panel). Returns pending messages and clears them. Call this to see what the player said in-game."""
+    global _ingame_inbox
+    async with _ingame_lock:
+        msgs = list(_ingame_inbox)
+        _ingame_inbox.clear()
+    return json.dumps({"ok": True, "messages": msgs}, ensure_ascii=False)
+
+
+@mcp.tool()
+async def send_ingame(message: str) -> str:
+    """Send a chat reply into the player's in-game Nagi chat panel (host game). Use this to reply to the player inside Stardew without them leaving the game."""
+    return await _tool("send_ingame", {"sender": "Nagi", "message": message})
+
+
 # ── build the root Starlette app and add our routes on top ──
 
 app = mcp.streamable_http_app()  # must stay the ROOT app so /mcp works
@@ -205,6 +223,26 @@ async def _root(request):
     })
 
 
+async def _ingame_in(request):
+    """Called by the HOST game's Nagi chat panel: store a player-typed chat message for the phone to read."""
+    global _ingame_inbox
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "invalid json"}, status_code=400)
+    token = request.headers.get("x-token", "") or request.query_params.get("token", "")
+    if TOKEN != "changeme" and token != TOKEN:
+        return JSONResponse({"ok": False, "error": "unauthorized"}, status_code=401)
+    sender = str(body.get("sender") or "Player")
+    message = str(body.get("message") or "").strip()
+    if not message:
+        return JSONResponse({"ok": False, "error": "empty message"}, status_code=400)
+    async with _ingame_lock:
+        _ingame_inbox.append({"sender": sender, "message": message})
+    log.info("ingame chat from %s: %s", sender, message)
+    return JSONResponse({"ok": True})
+
+
 async def _tunnel(ws):
     """The player's PC client connects here to receive tool calls for itself."""
     global _pc_ws
@@ -246,6 +284,7 @@ async def _tunnel(ws):
 
 app.router.add_route("/health", _health, ["GET"])
 app.router.add_route("/", _root, ["GET"])
+app.router.add_route("/ingame-in", _ingame_in, ["POST"])
 app.router.add_websocket_route("/tunnel", _tunnel)
 
 

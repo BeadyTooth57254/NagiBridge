@@ -16,6 +16,21 @@
 
 ---
 
+## 双实例 coop + 游戏内聊天（host 你玩，AI 当 farmhand）
+
+星露谷 coop 是 **host 起局 + farmhand 加入**，也就是两局（双实例）。NagiBridge 在两局都装上，各自**按角色**绑定自己的 HTTP 端口（`config.json` 的 `HostPort` / `FarmhandPort`）：
+
+| 实例 | 角色判定 | 端口（默认） | 用途 |
+|---|---|---|---|
+| **host**（你玩） | `IsMainPlayer == true` | **58331** | 你的游戏；**游戏内聊天**接 operit |
+| **farmhand**（AI） | `IsMainPlayer == false` | **58332** | AI 用 MCP 操控 |
+
+- **启动顺序无关紧要**：`EnsureServerStarted` 在进入存档后按 `IsMainPlayer` 判定角色，再绑对应端口；日志和 `/status` 会写明 `role=HOST|FARMHAND` 和端口，不会混淆。
+- **游戏内聊天 → operit**：host 的 Nagi 聊天面板（按 `` ` `` 打开），在 `config.json` 里设 `"Mode": "operit"` + `OperitBridgeUrl`（默认 `http://127.0.0.1:8000`）+ `OperitBridgeToken`（与桥一致）。你打的字会 POST 到桥 `/ingame-in`，operit 用 `read_ingame` 读到、用 `send_ingame` 回复，回复经桥 + 隧道推回 host 的面板（`/chat/push`）。
+- **AI 控 farmhand**：client 的 `NAGI_GAME_URL` 指 **58332**（farmhand）；`NAGI_HOST_URL` 指 **58331**（host，仅用于推聊天回复）。
+
+---
+
 ## 模式一：局域网直连（默认/最简单，家用推荐）
 
 手机和电脑**同一 Wi-Fi**，不依赖任何云服务器。
@@ -83,7 +98,8 @@ python client.py
 | `NAGI_LAN_IP`（server） | 覆盖自动探测的局域网 IP（VPN/多网卡/无外网时用） | 自动探测 |
 | `NAGI_BRIDGE_TOKEN` | 共享密钥，server/client 一致 | changeme（必改） |
 | `NAGI_BRIDGE_URLS`（client） | 逗号分隔的桥地址（可多个） | `ws://127.0.0.1:8000/tunnel` |
-| `NAGI_GAME_URL`（client） | 游戏 HTTP API | `http://127.0.0.1:58331` |
+| `NAGI_GAME_URL`（client） | farmhand（AI 控的）游戏 HTTP API | `http://127.0.0.1:58332` |
+| `NAGI_HOST_URL`（client） | host（玩家玩的）游戏 HTTP API，用于游戏内聊天回推 | `http://127.0.0.1:58331` |
 | `NAGI_MODS_JSON`（client） | 键位映射文件 | `../scripts/mods_keybinds.json` |
 | `NAGI_BRIDGE_MCP_AUTH`（server） | 是否要求 `/mcp` 带 `Authorization: Bearer <token>` | **开**（`1`） |
 
@@ -99,7 +115,8 @@ python client.py
 
 ## 本地验证（不用游戏）
 
-三个终端，分别跑 `mock_game.py`、`server.py`（`NAGI_BRIDGE_TOKEN=t`）、`client.py`（连 `ws://127.0.0.1:8000/tunnel`，`NAGI_GAME_URL=http://127.0.0.1:58331`），再用任意 MCP 客户端连 `http://127.0.0.1:8000/mcp`，可看到 15 个工具并调用。
+- **工具链路**：三个终端，分别跑 `mock_game.py`、`server.py`（`NAGI_BRIDGE_TOKEN=t`）、`client.py`（连 `ws://127.0.0.1:8000/tunnel`，`NAGI_GAME_URL=http://127.0.0.1:58332`），再用任意 MCP 客户端连 `http://127.0.0.1:8000/mcp`，可看到工具并调用。
+- **游戏内聊天往返**：直接跑 `python test_chat_loop.py`，会用一个模拟 host 游戏把整条「`/ingame-in` → `read_ingame` → `send_ingame` → host `/chat/push`」走一遍。见到 `ALL OK` 即通。
 
 ## 加工具
 

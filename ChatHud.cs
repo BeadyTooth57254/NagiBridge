@@ -98,7 +98,7 @@ public class ChatHud
         if (!string.IsNullOrEmpty(apiUrl))
             _apiUrlInput = apiUrl;
 
-        if (mode.Equals("cc", StringComparison.OrdinalIgnoreCase))
+        if (mode.Equals("cc", StringComparison.OrdinalIgnoreCase) || mode.Equals("operit", StringComparison.OrdinalIgnoreCase))
         {
             _state = ChatState.Chat;
             _modeChosen = true;

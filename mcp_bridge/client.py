@@ -7,7 +7,8 @@ token, and answers tool calls by mapping them to the game's NagiBridge HTTP API
 Env:
     NAGI_BRIDGE_URL       e.g. wss://<your-zeabur-url>/tunnel  (default ws://localhost:8000/tunnel)
     NAGI_BRIDGE_TOKEN     shared secret, must match the server
-    NAGI_GAME_URL         game HTTP API (default http://127.0.0.1:58331)
+    NAGI_GAME_URL         farmhand game HTTP API (default http://127.0.0.1:58332)
+    NAGI_HOST_URL         host game HTTP API for in-game chat pushes (default http://127.0.0.1:58331)
     NAGI_MODS_JSON        path to mods_keybinds.json (default ../scripts/mods_keybinds.json)
 """
 import asyncio
@@ -33,7 +34,8 @@ BRIDGE_URLS = [u.strip() for u in os.environ.get(
     os.environ.get("NAGI_BRIDGE_URL", "ws://127.0.0.1:8000/tunnel"),
 ).split(",") if u.strip()]
 TOKEN = os.environ.get("NAGI_BRIDGE_TOKEN", "changeme")
-GAME_URL = os.environ.get("NAGI_GAME_URL", "http://127.0.0.1:58331")
+GAME_URL = os.environ.get("NAGI_GAME_URL", "http://127.0.0.1:58332")  # farmhand (AI-controlled) game
+HOST_URL = os.environ.get("NAGI_HOST_URL", "http://127.0.0.1:58331")  # host (player) game, for in-game chat pushes
 MODS_JSON = os.environ.get(
     "NAGI_MODS_JSON",
     os.path.normpath(os.path.join(_DIR, "..", "scripts", "mods_keybinds.json")),
@@ -41,9 +43,9 @@ MODS_JSON = os.environ.get(
 
 
 # ── game HTTP (stdlib, blocking; call via asyncio.to_thread) ──
-def http(method: str, path: str, args: dict = None):
+def http(method: str, path: str, args: dict = None, base: str = None):
     args = args or {}
-    url = GAME_URL + path
+    url = (base or GAME_URL) + path
     if method == "GET" and args:
         url += "?" + urllib.parse.urlencode(args)
     data = None
@@ -111,8 +113,22 @@ ROUTES = {
     "select": ("POST", "/select", {"name": None}),
 }
 
+# Methods that target the HOST game (the player) rather than the farmhand — used for in-game chat replies.
+HOST_ROUTES = {
+    "send_ingame": ("POST", "/chat/push", {"sender": None, "message": None}),
+}
+
 
 def dispatch(method: str, args: dict):
+    if method in HOST_ROUTES:
+        m, p, params = HOST_ROUTES[method]
+        body = {}
+        if params:
+            for k, default in params.items():
+                v = args.get(k, default)
+                if v is not None:
+                    body[k] = v
+        return http(m, p, body, base=HOST_URL)
     if method == "keybind":
         return query_keybinds(mod=args.get("mod", ""), query=args.get("query", ""))
     if method not in ROUTES:
