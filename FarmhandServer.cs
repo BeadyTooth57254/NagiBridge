@@ -442,7 +442,7 @@ public class FarmhandServer
                     using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(cfg));
                     var root = doc.RootElement;
                     toggle = root.TryGetProperty("EnableAutomationButton", out var t) && t.ValueKind == System.Text.Json.JsonValueKind.String ? t.GetString() : null;
-                    chest = root.TryGetProperty("CatchTreasureButton", out var c2) && c2.ValueKind == System.Text.Json.JsonValueKind.String ? c2.GetString() : null;
+                    chest = root.TryGetProperty("ToggleTreasureTargetingButton", out var c2) && c2.ValueKind == System.Text.Json.JsonValueKind.String ? c2.GetString() : null;
                     inventoryFull = root.TryGetProperty("ActionIfInventoryFull", out var i) && i.ValueKind == System.Text.Json.JsonValueKind.String ? i.GetString() : null;
                 }
             }
@@ -1150,15 +1150,19 @@ public class FarmhandServer
         if (!Context.IsWorldReady) throw new InvalidOperationException("World not ready");
         var p = ReadJson(ctx);
         int tx = GetReq<int>(p, "x"), ty = GetReq<int>(p, "y");
-        int steps = 0;
+        // FindPath is a bounded BFS on tile passability (no mutable state), so it's
+        // safe to run synchronously to report the real step count. Only the field
+        // writes stay on the game thread via Enqueue.
+        var farmer = Game1.player;
+        var path = farmer is null
+            ? new List<Point>()
+            : FindPath(farmer.currentLocation, farmer.TilePoint, new Point(tx, ty));
+        int steps = path.Count;
         Enqueue(() =>
         {
-            var farmer = Game1.player;
-            if (farmer is null) return;
-            var path = FindPath(farmer.currentLocation, farmer.TilePoint, new Point(tx, ty));
-            _path = path.Count > 0 ? new Queue<Point>(path) : new Queue<Point>(new[] { new Point(tx, ty) });
+            if (Game1.player is null) return;
+            _path = steps > 0 ? new Queue<Point>(path) : new Queue<Point>(new[] { new Point(tx, ty) });
             _moveCooldown = 0;
-            steps = path.Count;
         });
         return new { ok = true, x = tx, y = ty, steps };
     }
