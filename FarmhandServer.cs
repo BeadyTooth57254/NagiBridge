@@ -221,11 +221,13 @@ public class FarmhandServer
             object? result = (method, path) switch
             {
                 ("GET", "/status") => HandleStatus(),
-                ("GET", "/state") => HandleState(),
+                ("GET", "/state") => HandleState(ctx),
                 ("GET", "/surroundings") => HandleSurroundings(ctx, "surroundings"),
                 ("GET", "/ctx") => HandleSurroundings(ctx, "ctx"),
                 ("GET", "/machines") => HandleMachines(),
                 ("GET", "/menu") => HandleMenu(),
+                ("GET", "/inventory") => HandleInventory(ctx),
+                ("GET", "/selftest") => HandleSelfTest(),
                 ("POST", "/move") => HandleMove(ctx),
                 ("POST", "/stop") => HandleStop(),
                 ("POST", "/face") => HandleFace(ctx),
@@ -316,20 +318,21 @@ public class FarmhandServer
         isMultiplayer = Context.IsMultiplayer
     };
 
-    private object HandleState()
+    private object HandleState(HttpListenerContext ctx)
     {
         if (!Context.IsWorldReady || Game1.player is null)
             return new { ok = true, worldReady = false };
+
+        // `full` gates the heavy readouts (inventory/buildings/chunk tiles/mods/teleports/forge)
+        // behind an explicit request, so the default /state stays light and fast and the AI
+        // calls a full read only when it genuinely needs everything.
+        string fv = ctx.Request.QueryString["full"] ?? "";
+        bool full = fv is "1" or "true";
 
         var farmer = Game1.player;
         var loc = farmer.currentLocation;
 
         var npcs = loc.characters.Select(n => new { name = n.Name, x = n.TilePoint.X, y = n.TilePoint.Y }).ToList();
-
-        var inventory = farmer.Items
-            .Where(i => i != null)
-            .Select(i => new { name = i.Name, stack = i.Stack, category = i.getCategoryName() })
-            .ToList();
 
         // Chunk-aware view: the current chunk's origin plus the notable tiles in it,
         // so a single /state call also tells the AI what's right around the player.
@@ -339,22 +342,25 @@ public class FarmhandServer
         int cx = farmer.TilePoint.X, cy = farmer.TilePoint.Y;
         int mapW = loc.Map.DisplayWidth / 64, mapH = loc.Map.DisplayHeight / 64;
         var chunkTiles = new List<object>();
-        foreach (var p in ComputeReadTiles(chunkSize, "tool"))
+        if (full)
         {
-            int tx = p.X, ty = p.Y;
-            if (tx < 0 || ty < 0 || tx >= mapW || ty >= mapH) continue;
-            var tv = new Vector2(tx, ty);
-            bool passable = loc.isTilePassable(tv);
-            string? obj = null;
-            if (loc.objects.TryGetValue(tv, out var o)) obj = o.Name;
-            string? terrain = null;
-            if (loc.terrainFeatures.TryGetValue(tv, out var tf))
+            foreach (var p in ComputeReadTiles(chunkSize, "tool"))
             {
-                if (tf is StardewValley.TerrainFeatures.HoeDirt dirt && dirt.crop != null) terrain = $"HoeDirt:{ResolveItemName(dirt.crop.indexOfHarvest.Value)}";
-                else terrain = tf.GetType().Name;
+                int tx = p.X, ty = p.Y;
+                if (tx < 0 || ty < 0 || tx >= mapW || ty >= mapH) continue;
+                var tv = new Vector2(tx, ty);
+                bool passable = loc.isTilePassable(tv);
+                string? obj = null;
+                if (loc.objects.TryGetValue(tv, out var o)) obj = o.Name;
+                string? terrain = null;
+                if (loc.terrainFeatures.TryGetValue(tv, out var tf))
+                {
+                    if (tf is StardewValley.TerrainFeatures.HoeDirt dirt && dirt.crop != null) terrain = $"HoeDirt:{ResolveItemName(dirt.crop.indexOfHarvest.Value)}";
+                    else terrain = tf.GetType().Name;
+                }
+                if (obj != null || terrain != null || !passable)
+                    chunkTiles.Add(new { x = tx, y = ty, passable, obj, terrain });
             }
-            if (obj != null || terrain != null || !passable)
-                chunkTiles.Add(new { x = tx, y = ty, passable, obj, terrain });
         }
         object chunkInfo = new { size = chunkSize, window = readWindow, origin = new { x = cx - half, y = cy - half }, tiles = chunkTiles };
 
@@ -379,6 +385,7 @@ public class FarmhandServer
                 name = farmer.Name,
                 x = farmer.TilePoint.X,
                 y = farmer.TilePoint.Y,
+                tile = TilePos(farmer.TilePoint.X, farmer.TilePoint.Y, chunkSize),
                 stamina = farmer.Stamina,
                 maxStamina = farmer.MaxStamina,
                 health = farmer.health,
@@ -396,19 +403,123 @@ public class FarmhandServer
             time = new { timeOfDay = Game1.timeOfDay, dayOfMonth = Game1.dayOfMonth, season = Game1.currentSeason, year = Game1.year },
             stateOutput = _config.stateOutput,
             compat = CompatSummary.Length > 0 ? CompatSummary : "(未激活兼容profile)",
-            forgeEnchantments = ReadForgeEnchantments(),
+            forgeEnchantments = full ? ReadForgeEnchantments() : null,
             activeMenu = menu,
             npcs,
-            inventory,
-            buildings = CollectBuildings(loc),
+            inventory = full ? ReadInventory() : null,
+            buildings = full ? CollectBuildings(loc) : null,
             chunk = chunkInfo,
-            mods = BuildModState(loc),
-            teleports = CollectTeleports(loc)
+            mods = full ? BuildModState(loc) : null,
+            teleports = full ? CollectTeleports(loc) : null
         };
     }
 
     // ---- Mod behaviour layer (honest, data-driven: these only report what the mod
     //      actually does / what is present in-game, never guess). ----
+
+    /// <summary>Report a tile as precise (x,y) + the chunk index it belongs to + its
+    /// sub-position inside that chunk, so the AI gets an explicit coordinate hierarchy
+    /// (e.g. world tile 72,38 → chunk 14,7 sub 2,3 for chunkSize 5).</summary>
+    private static object TilePos(int x, int y, int size)
+    {
+        int cs = Math.Max(1, size);
+        int chunkX = (int)Math.Floor((double)x / cs), chunkY = (int)Math.Floor((double)y / cs);
+        return new { x, y, chunk = new { x = chunkX, y = chunkY, size = cs }, sub = new { x = x - chunkX * cs, y = y - chunkY * cs } };
+    }
+
+    /// <summary>Full inventory snapshot (name/stack/category) for /state?full=1.</summary>
+    private object ReadInventory()
+    {
+        var farmer = Game1.player;
+        if (farmer is null) return new List<object>();
+        return farmer.Items
+            .Where(i => i != null)
+            .Select(i => new { name = i.Name, stack = i.Stack, category = i.getCategoryName() })
+            .ToList();
+    }
+
+    /// <summary>Self-check for diagnosing why the AI loop isn't working: server binding,
+    /// config snapshot, mod count, memory and live compat profiles. Mirrors the README's
+    /// console selftest but exposed over the HTTP/MCP path so the AI can run it itself.</summary>
+    private object HandleSelfTest()
+    {
+        int modCount = 0;
+        List<string>? loaded = null;
+        try
+        {
+            if (_helper?.ModRegistry != null)
+            {
+                var all = _helper.ModRegistry.GetAll().ToList();
+                modCount = all.Count;
+                loaded = all.Select(m => m.Manifest.UniqueID).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().Take(30).ToList();
+            }
+        }
+        catch { }
+        int memMB = (int)(GC.GetTotalMemory(false) / 1048576);
+        return new
+        {
+            ok = true,
+            server = new
+            {
+                role = Role, port = Port, boundPort = _boundPort, started = _started,
+                worldReady = Context.IsWorldReady,
+                multiplayer = Context.IsMultiplayer
+            },
+            config = new
+            {
+                mode = _config.Mode,
+                hostPort = _config.HostPort,
+                farmhandPort = _config.FarmhandPort,
+                operitBridgeUrl = _config.OperitBridgeUrl,
+                forwardToOperitChat = _config.forwardToOperitChat,
+                operitWebUrl = _config.operitWebUrl,
+                enableAutoCompat = _config.enableAutoCompat,
+                stateOutput = _config.stateOutput,
+                chunkSize = _config.chunkSize,
+                readWindow = _config.readWindow
+            },
+            compat = new { active = CompatSummary.Length > 0 ? CompatSummary : "(未激活或尚未构建)", rules = CompatRules.Count },
+            mods = new { count = modCount, loaded },
+            memory = new { mb = memMB }
+        };
+    }
+
+    /// <summary>Read ONE row of the inventory grid, together with time + local map, so the
+    /// AI can manage the bag row by row without a full dump. Labels the equip hotkey and
+    /// how to move to another row (vanilla Stardew has no row-switch hotkey, so rows are
+    /// picked by the `row` param).</summary>
+    private object HandleInventory(HttpListenerContext ctx)
+    {
+        if (!Context.IsWorldReady || Game1.player is null)
+            return new { ok = false, error = "World not ready" };
+        var farmer = Game1.player;
+        int row = int.TryParse(ctx.Request.QueryString["row"], out var r) && r >= 0 ? r : 0;
+        const int perRow = 12;
+        int totalSlots = farmer.MaxItems;
+        int totalRows = Math.Max(1, (totalSlots + perRow - 1) / perRow);
+        row = Math.Min(row, totalRows - 1);
+        int start = row * perRow;
+        var slots = new List<object>();
+        for (int i = start; i < Math.Min(start + perRow, totalSlots); i++)
+        {
+            var it = i < farmer.Items.Count ? farmer.Items[i] : null;
+            string? hotkey = i <= 8 ? (i + 1).ToString() : (i == 9 ? "0" : null);
+            slots.Add(new { index = i, hotkey, name = it?.Name, stack = it?.Stack, category = it?.getCategoryName() });
+        }
+        int chunkSize = Math.Max(1, _config.chunkSize);
+        return new
+        {
+            ok = true, row, totalRows, perRow, slots,
+            time = new { timeOfDay = Game1.timeOfDay, dayOfMonth = Game1.dayOfMonth, season = Game1.currentSeason, year = Game1.year },
+            chunk = new { size = chunkSize, origin = new { x = farmer.TilePoint.X, y = farmer.TilePoint.Y } },
+            keys = new
+            {
+                equip = "slot hotkey 1-9,0 (toolbar row 0), or call select to bring a named item to hand",
+                nextRow = "pass row=N to read another row (vanilla Stardew has no hotkey to switch inventory rows)"
+            }
+        };
+    }
+
 
     /// <summary>Whether a given uniqueId is loaded in this session (real, not assumed).</summary>
     private bool IsModLoaded(string uniqueId)

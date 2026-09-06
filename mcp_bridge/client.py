@@ -101,6 +101,9 @@ def query_keybinds(mod="", query=""):
 # ── method -> HTTP route table ──
 ROUTES = {
     "get_state": ("GET", "/state", None),
+    "get_state_full": ("GET", "/state", {"full": "1"}),
+    "inventory": ("GET", "/inventory", {"row": None}),
+    "selftest": ("GET", "/selftest", None),
     "status": ("GET", "/status", None),
     "ctx": ("GET", "/ctx", {"radius": None}),
     "surroundings": ("GET", "/surroundings", {"radius": None}),

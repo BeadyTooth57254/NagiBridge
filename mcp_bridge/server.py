@@ -84,8 +84,30 @@ async def _tool(method: str, args: dict) -> str:
 
 @mcp.tool()
 async def get_state() -> str:
-    """Current game state: farmer position/health/stamina, time, location, inventory, active menu/event."""
+    """Current game state: farmer position (x,y + tile chunk/sub-coords), health/stamina, time, location, active menu, npcs. Light by default — call get_state_full for the full inventory/buildings/mods/teleports dump."""
     return await _tool("get_state", {})
+
+
+@mcp.tool()
+async def get_state_full() -> str:
+    """Full /state dump: everything in get_state, plus the whole inventory, buildings, compat mod readouts, teleports and forge enchantments. Use only when you really need the full picture; the plain get_state is lighter."""
+    return await _tool("get_state_full", {})
+
+
+@mcp.tool()
+async def inventory(row: int = 0) -> str:
+    """Read ONE row (12 slots) of the farmhand's inventory grid, with in-game time + the local map chunk. Slot hotkeys 1-9,0 equip the toolbar; to read another row pass row=1 (or 2, ...) — vanilla Stardew has no hotkey to switch rows."""
+    return await _tool("inventory", {"row": row})
+
+
+@mcp.tool()
+async def wheatstook_selftest() -> str:
+    """Diagnostics: server binding, config snapshot, loaded-mod count, memory, live compat profiles — plus whether the PC tunnel/chat channel is connected. Run this when the AI loop isn't working to see what's up."""
+    data = await _call_pc("selftest", {})
+    if not isinstance(data, dict):
+        data = {"ok": False, "error": str(data)}
+    data["bridge"] = {"tunnel_connected": _pc_ws is not None}
+    return json.dumps(data, ensure_ascii=False)
 
 
 @mcp.tool()
@@ -138,7 +160,7 @@ async def dialogue_next(count: int = 1) -> str:
 
 @mcp.tool()
 async def keybind(mod: str = "", query: str = "") -> str:
-    """Look up a mod's keybind from its extracted config (query matches mod/feature/path). Returns a ready 'keychain' for press_key. Examples: query='quick stack', query='npc map'."""
+    """Look up a mod's keybind from a static, hand-curated table (scripts/mods_keybinds.json), NOT the live config — it's re-read fresh on every query. It lists keys that mod authors ship; if a mod changes its hotkey in config without the table being updated, this reports the stale default. query matches mod/feature/path, e.g. query='quick stack', query='npc map'. Returns a ready 'keychain' for press_key."""
     return await _tool("keybind", {"mod": mod, "query": query})
 
 
