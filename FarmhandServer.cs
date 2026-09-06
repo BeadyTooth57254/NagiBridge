@@ -233,7 +233,7 @@ public class FarmhandServer
                 ("POST", "/tool") => HandleTool(ctx),
                 ("POST", "/key") => HandleKey(ctx),
                 ("POST", "/tractor") => HandleTractor(ctx),
-                ("POST", "/drop") => HandleDrop(),
+                ("POST", "/drop") => HandleDrop(ctx),
                 ("POST", "/follow") => HandleFollow(ctx),
                 ("POST", "/area") => HandleArea(ctx),
                 ("POST", "/emote") => HandleEmote(ctx),
@@ -285,7 +285,15 @@ public class FarmhandServer
 
     private static void Respond(HttpListenerContext ctx, int status, object body)
     {
-        var json = JsonDict(body);
+        // Stamp every reply with the current in-game clock so the AI always knows the
+        // time when any tool result comes back, not just on /state.
+        System.Text.Json.Nodes.JsonNode? node = JsonSerializer.SerializeToNode(body);
+        if (node is System.Text.Json.Nodes.JsonObject obj)
+        {
+            obj["timeOfDay"] = Game1.timeOfDay;
+            obj["gameTime"] = $"{Game1.currentSeason} {Game1.dayOfMonth}, Year {Game1.year}";
+        }
+        var json = node?.ToJsonString() ?? "{}";
         var buf = System.Text.Encoding.UTF8.GetBytes(json);
         ctx.Response.StatusCode = status;
         ctx.Response.ContentType = "application/json";
@@ -1198,19 +1206,28 @@ public class FarmhandServer
         var p = ReadJson(ctx);
         string name = Get(p, "name", "current");
         // "current" uses whatever tool is equipped; any other name selects that tool.
-        // The actual tool use must run on the game thread (BeginUsingTool), so the
-        // synchronous reply reports "accepted/queued" — it can't know the outcome yet.
-        // (This was returning ok:false because `used` was read before the queued action ran.)
+        // Verify synchronously so the AI gets a real reason instead of a silent ok:false
+        // when it asks for a tool it doesn't hold (this was the 'Hoe failed but why?' gap).
+        var farmer = Game1.player;
+        if (farmer is null) return new { ok = false, error = "No player" };
+        if (name != "current")
+        {
+            var tool = farmer.Items.OfType<Tool>().FirstOrDefault(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (tool == null)
+                return new { ok = false, error = $"未持有该工具 '{name}' (tool not in inventory). Current: {farmer.CurrentTool?.Name ?? "(empty)"}" };
+        }
+        // The actual tool use must run on the game thread (BeginUsingTool), so the reply
+        // reports "accepted/queued" — it can't know the outcome yet.
         Enqueue(() =>
         {
-            var farmer = Game1.player;
-            if (farmer is null) return;
+            var f = Game1.player;
+            if (f is null) return;
             if (name != "current")
             {
-                var tool = farmer.Items.OfType<Tool>().FirstOrDefault(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-                if (tool != null) farmer.CurrentToolIndex = farmer.Items.IndexOf(tool);
+                var t = f.Items.OfType<Tool>().FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                if (t != null) f.CurrentToolIndex = f.Items.IndexOf(t);
             }
-            farmer.BeginUsingTool();
+            f.BeginUsingTool();
         });
         return new { ok = true, tool = name, queued = true };
     }
@@ -1265,16 +1282,23 @@ public class FarmhandServer
         return new { ok = true, op, ridingTractor = RidingTractor(), mountName = Game1.player?.mount?.Name };
     }
 
-    private object HandleDrop()
+    private object HandleDrop(HttpListenerContext ctx)
     {
         if (!Context.IsWorldReady) throw new InvalidOperationException("World not ready");
+        var p = ReadJson(ctx);
+        var farmer = Game1.player;
+        string? item = farmer?.CurrentTool?.Name ?? farmer?.ActiveObject?.Name;
+        bool isValuable = farmer?.CurrentTool != null ||
+                          (farmer?.ActiveObject != null && farmer.ActiveObject.Category == StardewValley.Object.SeedsCategory);
+        if (isValuable && !Get(p, "confirm", false))
+            return new { ok = false, error = $"You're holding '{item}' (a tool/seed). Drop removes it from your inventory permanently — pass confirm:true to proceed." };
         Enqueue(() =>
         {
-            var farmer = Game1.player;
-            if (farmer is null) return;
-            farmer.reduceActiveItemByOne();
+            var f = Game1.player;
+            if (f is null) return;
+            f.reduceActiveItemByOne();
         });
-        return new { ok = true };
+        return new { ok = true, item, warning = $"Dropped '{item}' — it was removed from your inventory and now lies on the ground." };
     }
 
     private object HandleFollow(HttpListenerContext ctx)
@@ -1282,17 +1306,24 @@ public class FarmhandServer
         if (!Context.IsWorldReady) throw new InvalidOperationException("World not ready");
         var p = ReadJson(ctx);
         string target = Get(p, "target", "Follow");
+        var loc = Game1.player?.currentLocation;
+        // Validate the target actually exists before pathing, so the AI gets a real
+        // "no such target" instead of an echo that silently goes nowhere.
+        bool isNpc = loc != null && loc.characters.Any(n => n.Name.Equals(target, StringComparison.OrdinalIgnoreCase));
+        bool isPlayer = Game1.otherFarmers.Values.Any(f => f.Name.Equals(target, StringComparison.OrdinalIgnoreCase));
+        if (!isNpc && !isPlayer)
+            return new { ok = false, error = $"找不到目标 '{target}' (no NPC or player with that name in the current location)." };
         Enqueue(() =>
         {
-            var loc = Game1.player?.currentLocation;
-            var npc = loc?.characters.FirstOrDefault(n => n.Name.Equals(target, StringComparison.OrdinalIgnoreCase));
+            var l = Game1.player?.currentLocation;
+            var npc = l?.characters.FirstOrDefault(n => n.Name.Equals(target, StringComparison.OrdinalIgnoreCase));
             if (npc != null)
             {
-                var path = FindPath(loc!, Game1.player!.TilePoint, npc.TilePoint);
+                var path = FindPath(l!, Game1.player!.TilePoint, npc.TilePoint);
                 _path = path.Count > 0 ? new Queue<Point>(path) : null;
             }
         });
-        return new { ok = true, target };
+        return new { ok = true, target, status = "tracking" };
     }
 
     private object HandleArea(HttpListenerContext ctx)
@@ -1301,8 +1332,9 @@ public class FarmhandServer
         var p = ReadJson(ctx);
         string op = Get(p, "op", "inspect");
         int x1 = Get(p, "x1", 0), y1 = Get(p, "y1", 0), x2 = Get(p, "x2", 0), y2 = Get(p, "y2", 0);
-        // v1: area is a placeholder for harvest/water/etc. Just acknowledge for now.
-        return new { ok = true, op, area = new { x = Math.Min(x1, x2), y = Math.Min(y1, y2), w = Math.Abs(x2 - x1) + 1, h = Math.Abs(y2 - y1) + 1 }, note = "area ops refined in a later version" };
+        // v1: area is a placeholder for harvest/water/etc. Mark WIP so the AI doesn't
+        // assume it actually performed the action.
+        return new { ok = true, op, wip = true, area = new { x = Math.Min(x1, x2), y = Math.Min(y1, y2), w = Math.Abs(x2 - x1) + 1, h = Math.Abs(y2 - y1) + 1 }, note = "WIP: area ops (harvest/water/etc.) not implemented yet — this only reports the region bounds." };
     }
 
     private object HandleEmote(HttpListenerContext ctx)

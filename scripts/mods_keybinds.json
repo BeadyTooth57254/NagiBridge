@@ -399,16 +399,6 @@
     ]
   },
   {
-    "mod": "Fishing Assistant 2",
-    "modId": "ChibiKyu.FishingAssistant2",
-    "file": "config.json",
-    "feature": "CatchTreasureButton",
-    "path": "CatchTreasureButton",
-    "keys": [
-      "F6"
-    ]
-  },
-  {
     "mod": "[自动门]AutomaticGates",
     "modId": null,
     "file": "config.json",

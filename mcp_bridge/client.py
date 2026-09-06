@@ -58,7 +58,16 @@ def http(method: str, path: str, args: dict = None, base: str = None):
         with urllib.request.urlopen(req, timeout=15) as r:
             return json.loads(r.read().decode("utf-8"))
     except urllib.error.URLError as e:
+        reason = getattr(e, "reason", None)
+        if isinstance(reason, ConnectionRefusedError):
+            return {"ok": False, "error": "game HTTP refused: the farmhand/host server is NOT listening on that port (Stardew closed, or that server never started) — retry only after the game is up"}
+        if isinstance(reason, TimeoutError):
+            return {"ok": False, "error": "game HTTP timed out: server up but not answering — retry once, else the game is frozen"}
         return {"ok": False, "error": f"game HTTP unreachable: {e}"}
+    except ConnectionRefusedError as e:
+        return {"ok": False, "error": f"game HTTP refused (port not listening): {e}"}
+    except ConnectionResetError as e:
+        return {"ok": False, "error": f"game HTTP reset: server dropped the connection: {e}"}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
