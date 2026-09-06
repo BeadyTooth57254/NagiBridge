@@ -1197,7 +1197,10 @@ public class FarmhandServer
         if (!Context.IsWorldReady) throw new InvalidOperationException("World not ready");
         var p = ReadJson(ctx);
         string name = Get(p, "name", "current");
-        bool? used = null;
+        // "current" uses whatever tool is equipped; any other name selects that tool.
+        // The actual tool use must run on the game thread (BeginUsingTool), so the
+        // synchronous reply reports "accepted/queued" — it can't know the outcome yet.
+        // (This was returning ok:false because `used` was read before the queued action ran.)
         Enqueue(() =>
         {
             var farmer = Game1.player;
@@ -1208,9 +1211,8 @@ public class FarmhandServer
                 if (tool != null) farmer.CurrentToolIndex = farmer.Items.IndexOf(tool);
             }
             farmer.BeginUsingTool();
-            used = true;
         });
-        return new { ok = used ?? false, tool = name };
+        return new { ok = true, tool = name, queued = true };
     }
 
     private object HandleKey(HttpListenerContext ctx)
@@ -1334,20 +1336,27 @@ public class FarmhandServer
         if (!Context.IsWorldReady) throw new InvalidOperationException("World not ready");
         var p = ReadJson(ctx);
         string name = GetReq<string>(p, "name");
-        bool? found = null;
+        // Look up the tool synchronously (a light read on the farmer's inventory) so we
+        // can report a truthful ok/slot; the actual CurrentToolIndex write is deferred to
+        // the game thread. (Previously `found` was read before the queued action ran, so
+        // select always returned ok:false.)
+        var farmer = Game1.player;
         int? slot = null;
-        Enqueue(() =>
+        if (farmer != null)
         {
-            var farmer = Game1.player;
-            if (farmer is null) return;
             for (int i = 0; i < farmer.Items.Count; i++)
             {
                 if (farmer.Items[i] != null && farmer.Items[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-                { farmer.CurrentToolIndex = i; found = true; slot = i; break; }
+                { slot = i; break; }
             }
-            if (found != true) found = false;
+        }
+        bool ok = slot.HasValue;
+        Enqueue(() =>
+        {
+            if (Game1.player is null || !slot.HasValue) return;
+            Game1.player.CurrentToolIndex = slot.Value;
         });
-        return new { ok = found ?? false, name, slot };
+        return new { ok, name, slot };
     }
 
     /// <summary>Buy an item from the currently open shop. Validates read-only, then queues the
