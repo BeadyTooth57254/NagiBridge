@@ -460,6 +460,37 @@ public class FarmhandServer
         };
     }
 
+    /// <summary>Skull Cavern Elevator (lestoph): every N floors there's an elevator you can
+    /// use to descend quickly instead of stairs. Read its config so the AI can fast-travel down.
+    /// Returns null when the mod isn't loaded.</summary>
+    private object? ReadSkullCavernElevator()
+    {
+        if (!IsModLoaded("SkullCavernElevator")) return null;
+        int? step = null, cost = null;
+        try
+        {
+            var dir = FindModDir("SkullCavernElevator");
+            if (!string.IsNullOrEmpty(dir))
+            {
+                var cfg = Path.Combine(dir, "config.json");
+                if (File.Exists(cfg))
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(cfg));
+                    var root = doc.RootElement;
+                    step = root.TryGetProperty("ElevatorStep", out var s) && s.ValueKind == System.Text.Json.JsonValueKind.Number ? s.GetInt32() : (int?)null;
+                    cost = root.TryGetProperty("ElevatorCostPerStep", out var c) && c.ValueKind == System.Text.Json.JsonValueKind.Number ? c.GetInt32() : (int?)null;
+                }
+            }
+        }
+        catch { }
+        return new
+        {
+            active = true,
+            floorStep = step,
+            costPerStep = cost
+        };
+    }
+
     /// <summary>Summarise the impactful gameplay mods and what they change, so the AI
     /// can adapt (don't manually operate automated machines; chests are reachable remotely;
     /// junimos handle chores). Every flag is real: read from the loaded mod registry.</summary>
@@ -485,7 +516,8 @@ public class FarmhandServer
             resourceStorage = resStorage,
             miniObelisks = obelisk,
             bigBackpack = bigPack,
-            fishingAssistant = ReadFishingAssistant()
+            fishingAssistant = ReadFishingAssistant(),
+            skullCavernElevator = ReadSkullCavernElevator()
         };
     }
 
