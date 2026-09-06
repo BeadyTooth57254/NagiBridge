@@ -87,6 +87,11 @@ public class ModEntry : Mod
             "Run a quick self-check and print a diagnostic summary (config, channels, knowledge base, memory, server).",
             OnSelfTestCommand);
 
+        helper.ConsoleCommands.Add(
+            "wheatstook_compat",
+            "Explain the auto-compat framework: which things are auto-covered (runtime data) and which need a hand-written adapter, plus the active profiles.",
+            OnCompatCommand);
+
         Monitor.Log($"WheatStook (clean-room) loaded. Mode={_config.Mode}, forwardToOperitChat={_config.forwardToOperitChat}", LogLevel.Info);
     }
 
@@ -276,6 +281,7 @@ public class ModEntry : Mod
         Monitor.Log("  wheatstook_operit <话>: 直接把话发给 Operit 并读回", LogLevel.Info);
         Monitor.Log("  wheatstook_mods [关键词]: 查已装模组", LogLevel.Info);
         Monitor.Log("  wheatstook_selftest: 一键自检(配置/通道/知识库/记忆/服务器)", LogLevel.Info);
+        Monitor.Log("  wheatstook_compat: 说明自动兼容(哪些自动覆盖/哪些需手写适配器)", LogLevel.Info);
         Monitor.Log("  wheatstook_help: 显示本帮助", LogLevel.Info);
         Monitor.Log("  wheatstook_mem add <话> | list | del <话> | clear: 长期记忆", LogLevel.Info);
     }
@@ -327,6 +333,16 @@ public class ModEntry : Mod
     private void OnRenderedHud(object? sender, RenderedHudEventArgs e)
     {
         _chatHud?.Draw();
+    }
+
+    private void OnCompatCommand(string command, string[] args)
+    {
+        Monitor.Log("=== 麦垛 自动兼容 (CompatLayer) ===", LogLevel.Info);
+        Monitor.Log($"默认关 (enableAutoCompat=false), 按 UniqueId 检测; compatOverrides 可强开/强关. 已激活: {_compat?.Describe() ?? "(未构建)"}", LogLevel.Info);
+        Monitor.Log("[自动覆盖 无需手写适配器] 用运行时真实数据读取: 作物/机器/宝石复制机/商店/附魔/温室/酒窖/建筑/农场; CP 内容包; 数据驱动 CompatRules.json。", LogLevel.Info);
+        Monitor.Log("[需手写适配器] 数据表达不了的全新玩法: 新职业系统、行为异常的自定义机器、新小游戏、非数据驱动的全新机制。这类要在源码加 profile + 读取器。", LogLevel.Info);
+        Monitor.Log("[自行添加, 不用写代码] 编辑模组目录 CompatRules.json (带注释 JSON), 给'原版没有的东西'贴标签即可。", LogLevel.Info);
+        Monitor.Log($"[详情] 见仓库 COMPAT.md; 内置 profile 数: {_compat?.ProfileCount ?? 0}", LogLevel.Info);
     }
 
     private void OnChatSubmit(string text)

@@ -98,6 +98,7 @@ public class CompatLayer
     public bool HasCustomPlantMod => IsActive("Cornucopia.MoreFlowers") || IsActive("MissAnaira.StarCrops") || IsActive("aedenthorn.CustomBush");
     public bool HasRegionMod     => IsActive("Rafseazz.RidgesideVillage") || IsActive("maxmakesmods.deepwoodsmod");
     public int EnabledCount => _enabled.Count;
+    public int ProfileCount => Profiles.Length;
 
     /// <summary>Comma-separated labels of the active built-in profiles ("" if none).</summary>
     public string Describe()
