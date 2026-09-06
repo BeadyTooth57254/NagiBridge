@@ -50,7 +50,6 @@ public class CompatLayer
         ("Dragoon23.ForgeEnchantment",     "Pick Forge Enchantment (定向附魔)"),
         ("Stari.ManyEnchantments",         "Many Enchantments (附魔冲突修复)"),
         ("hawkfalcon.BetterJunimos",       "Better Junimos (更好的祝尼魔)"),
-        ("Cluom.ControlTree",              "Control Tree (小小树)"),
         ("PeacefulEnd.MultipleMiniObelisks","Multiple Mini Obelisks (传送石碑)"),
         ("EternalSoap.RemoteFridgeStorage","Remote Fridge Storage (远程冰箱/箱子)"),
         ("FlyingTNT.ResourceStorage",      "Resource Storage (大宗资源存储)"),
@@ -58,7 +57,6 @@ public class CompatLayer
         ("Hong.MoreMonsters",              "More Monsters (更多怪物)"),
         ("otc.supplycratesonbeach",        "Supply Crates on Beach (海滩补给箱)"),
         ("SkullCavernElevator",            "Skull Cavern Elevator (骷髅电梯)"),
-        ("aedenthorn.CustomSpouseRooms",   "Custom Spouse Rooms (配偶房定制)"),
         ("Luo.TheyStayWithYou",            "They Stay With You (与你同行)"),
         ("Cherry.PlatonicRelationships",   "Platonic Relationships (柏拉图爱情)"),
         ("Exblosis.LetsMoveIt",            "Lets Move It (移动一切)"),
@@ -68,7 +66,6 @@ public class CompatLayer
         ("Rakiin.AutomaticGates",          "Automatic Gates (自动门)"),
         ("ChibiKyu.FishingAssistant2",     "Fishing Assistant (自动钓鱼)"),
         ("LunaticShade.SkillfulClothes",   "Skillful Clothes (衣服效果)"),
-        ("Armitxes.UnlimitedPlayers",      "Unlimited Players (无限玩家)"),
     };
 
     public CompatLayer(IEnumerable<string> installed, ModConfig config, IMonitor monitor)

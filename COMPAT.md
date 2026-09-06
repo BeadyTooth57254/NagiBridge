@@ -41,9 +41,9 @@
 3. **新迷你游戏/特殊交互**：AI 需要专门逻辑去玩/触发。
 4. **非数据驱动的新机制**：状态不在标准 `objects`/`terrainFeatures`/`buildings` 里，得靠反射/特殊 API 读。
 
-**诚实举例**：现在仓库里**没有**这类"全新玩法"的适配器。当前 44 个内置 profile 全部是"通用读取器盖住"或"识别/标记让 AI 知道它在"，**没有**一个需要为新职业系统/新机器动作手写逻辑。所以**目前你不用手写任何适配器**——除非你装了上面那类模组，报名字给我，我按需补。
+**诚实举例**：现在仓库里**没有**这类"全新玩法"的适配器。当前 41 个内置 profile 全部是"通用读取器盖住"或"识别/标记让 AI 知道它在"，**没有**一个需要为新职业系统/新机器动作手写逻辑。所以**目前你不用手写任何适配器**——除非你装了上面那类模组，报名字给我，我按需补。
 
-## 三、内置 profile 清单（44 个）
+## 三、内置 profile 清单（41 个）
 
 按**处理方式**分组（便于你看哪些真要做适配器）：
 
@@ -51,7 +51,9 @@
 
 **通用读取器自动盖住（类别型）** — Marnie's Auto-Petters、Robin Sells BC、Shop Tabs、Pick Forge Enchantment、Many Enchantments、MoreGreenhouses、Super Massive Greenhouse、BuildMoreCellars、Content Patcher、Star Crops、More Flowers、Custom Bush、Custom Cask Mod、Joja Express、Auto Break Geode。
 
-**识别/标记（让 AI 知道它在，这农场不是原版）** — Wear More Rings、Combine Many Rings、Walk Of Life - Rebirth、Ridgeside Village、Deep Woods、Control Tree、More Monsters、Supply Crates on Beach、Skull Cavern Elevator、Custom Spouse Rooms、They Stay With You、Platonic Relationships、Lets Move It、Harvest Seeds Continued、Increased Artifact Spots、Share Experience、Automatic Gates、Skillful Clothes、Unlimited Players。
+**识别/标记（让 AI 知道它在，这农场不是原版）** — Wear More Rings、Combine Many Rings、Walk Of Life - Rebirth、Ridgeside Village、Deep Woods、More Monsters、Supply Crates on Beach、Skull Cavern Elevator、They Stay With You、Platonic Relationships、Lets Move It、Harvest Seeds Continued、Increased Artifact Spots、Share Experience、Automatic Gates、Skillful Clothes。
+
+> **有意排除**（纯视觉/内容包/联机人数，不改变 AI 交互，故不加 profile）：小小树（Control Tree，只改贴图）、配偶房定制（Custom Spouse Rooms，手动内容包）、无限玩家（Unlimited Players，抬联机人数上限）。
 
 ## 四、如何添加
 

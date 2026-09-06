@@ -30,7 +30,7 @@ Many mods **change the game world** (more ring slots, bigger backpack, custom cr
 - To force a specific one on/off: `compatOverrides` uses the UniqueId with `true`/`false` (takes priority over auto-detection). E.g. `{"bcmpinc.WearMoreRings": true, "spacechase0.BiggerBackpack": false}`.
 - Brand-new content mods (custom crops / new professions / new machines) need an adapter per mod; the detect + toggle framework is in place, and adapters are added per mod you name.
 
-For the full picture — which mods are auto-covered, which need a hand-written adapter, plus the current 44 profiles grouped by handling — see **[COMPAT.md](COMPAT.md)**. In-game, `wheatstook_compat` prints a concise version.
+For the full picture — which mods are auto-covered, which need a hand-written adapter, plus the current 41 profiles grouped by handling — see **[COMPAT.md](COMPAT.md)**. In-game, `wheatstook_compat` prints a concise version.
 
 ### Data-driven adapters: `CompatRules.json` (no code needed; anyone can fill it)
 
