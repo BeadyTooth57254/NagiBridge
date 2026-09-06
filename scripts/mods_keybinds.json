@@ -507,5 +507,15 @@
     "keys": [
       "LeftAlt"
     ]
+  },
+  {
+    "mod": "Joja Express",
+    "modId": "ofts.jojaExp",
+    "file": "config.json",
+    "feature": "Open",
+    "path": "Open",
+    "keys": [
+      "J"
+    ]
   }
 ]
