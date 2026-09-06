@@ -491,6 +491,24 @@ public class FarmhandServer
         };
     }
 
+    /// <summary>Read any string/property value from a mod's config.json. Returns null if the
+    /// mod isn't installed, has no config, or the property is absent. Used for data-driven compat
+    /// readouts so the AI knows the real value, not a guessed default.</summary>
+    private string? ReadConfigProp(string uniqueId, string prop)
+    {
+        try
+        {
+            var dir = FindModDir(uniqueId);
+            if (string.IsNullOrEmpty(dir)) return null;
+            var cfg = Path.Combine(dir, "config.json");
+            if (!File.Exists(cfg)) return null;
+            using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(cfg));
+            if (doc.RootElement.TryGetProperty(prop, out var v)) return v.ToString();
+        }
+        catch { }
+        return null;
+    }
+
     /// <summary>Summarise the impactful gameplay mods and what they change, so the AI
     /// can adapt (don't manually operate automated machines; chests are reachable remotely;
     /// junimos handle chores). Every flag is real: read from the loaded mod registry.</summary>
@@ -517,7 +535,36 @@ public class FarmhandServer
             miniObelisks = obelisk,
             bigBackpack = bigPack,
             fishingAssistant = ReadFishingAssistant(),
-            skullCavernElevator = ReadSkullCavernElevator()
+            skullCavernElevator = ReadSkullCavernElevator(),
+            automaticGates = IsModLoaded("Rakiin.AutomaticGates") ? new
+            {
+                active = true,
+                gateDelayMs = ReadConfigProp("Rakiin.AutomaticGates", "GateDelay")
+            } : null,
+            supplyCrates = IsModLoaded("otc.supplycratesonbeach") ? new
+            {
+                active = true,
+                chancePct = ReadConfigProp("otc.supplycratesonbeach", "SpawnPercentageChance"),
+                days = ReadConfigProp("otc.supplycratesonbeach", "NumberOfDays")
+            } : null,
+            seedDrop = IsModLoaded("recon88.HarvestSeedsContinued") ? new
+            {
+                active = true,
+                seedChance = ReadConfigProp("recon88.HarvestSeedsContinued", "SeedChance"),
+                guaranteedSeeds = ReadConfigProp("recon88.HarvestSeedsContinued", "GuaranteedSeeds")
+            } : null,
+            moreMonsters = IsModLoaded("Hong.MoreMonsters") ? new
+            {
+                active = true,
+                spawnMultiplier = ReadConfigProp("Hong.MoreMonsters", "MonsterMulty")
+            } : null,
+            skillfulClothes = IsModLoaded("LunaticShade.SkillfulClothes") ? new
+            {
+                active = true,
+                shirtEffects = ReadConfigProp("LunaticShade.SkillfulClothes", "EnableShirtEffects"),
+                pantsEffects = ReadConfigProp("LunaticShade.SkillfulClothes", "EnablePantsEffects"),
+                hatEffects = ReadConfigProp("LunaticShade.SkillfulClothes", "EnableHatEffects")
+            } : null
         };
     }
 
