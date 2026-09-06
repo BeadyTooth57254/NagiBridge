@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "game-overlay": {
-      "command": "bun",
-      "args": ["run", "./server.ts"]
-    }
-  }
-}

@@ -1,9 +1,0 @@
-{
-  "Name": "NagiFestivalBots",
-  "Author": "Nagi & Codex",
-  "Version": "1.0.0",
-  "Description": "Auto-plays festival minigames",
-  "UniqueID": "nagi.festivalbots",
-  "EntryDll": "NagiFestivalBots.dll",
-  "MinimumApiVersion": "3.0.0"
-}
