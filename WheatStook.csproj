@@ -11,17 +11,6 @@
     <ModFolderName>[AI聊天]麦垛 WheatStook</ModFolderName>
   </PropertyGroup>
 
-  <ItemGroup>
-    <!--
-      Clean-room rewrite: compile only the original source. ChatHud is now our own
-      clean-room rewrite, so it IS compiled. LlmClient and everything under mods\
-      are excluded here and migrated (replaced with original code) piece by piece.
-      Update this list as those are rewritten.
-    -->
-    <Compile Remove="LlmClient.cs" />
-    <Compile Remove="mods\**" />
-  </ItemGroup>
-
   <!--
     Pathoschild.Stardew.ModBuildConfig auto-detects the local Stardew Valley
     install (Steam / GOG / Xbox, on Windows / macOS / Linux) and references
