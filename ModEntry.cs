@@ -182,6 +182,7 @@ public class ModEntry : Mod
             _server = new FarmhandServer(_config!, Monitor, isHost: false, Helper);
             _server.CompatSummary = _compat?.Describe() ?? "";
             _server.CompatRules = _compatRules;
+            _server.ChatDisplay = DisplayAiChat;
             _server.Start();
         }
         _server?.Tick();
@@ -344,6 +345,18 @@ public class ModEntry : Mod
         Monitor.Log("[需手写适配器] 数据表达不了的全新玩法: 新职业系统、行为异常的自定义机器、新小游戏、非数据驱动的全新机制。这类要在源码加 profile + 读取器。", LogLevel.Info);
         Monitor.Log("[自行添加, 不用写代码] 编辑模组目录 CompatRules.json (带注释 JSON), 给'原版没有的东西'贴标签即可。", LogLevel.Info);
         Monitor.Log($"[详情] 见仓库 COMPAT.md; 内置 profile 数: {_compat?.ProfileCount ?? 0}", LogLevel.Info);
+    }
+
+    private void DisplayAiChat(string message)
+    {
+        // The AI said something in-game. The vanilla Game1.chatBox only renders on one
+        // player's viewport, so it stayed invisible to the AI-farmhand view. Route it to
+        // the mod's own chat panel (drawn on the active viewport via the global
+        // spriteBatch) and pop it open so the player actually sees it.
+        if (_chatHud is null) return;
+        _chatHud.AddMessage("Operit: " + message);
+        if (!_chatHud.IsOpen) _chatHud.Toggle();
+        Monitor.Log($"AI chat (in-game): {message}", LogLevel.Info);
     }
 
     private void OnChatSubmit(string text)

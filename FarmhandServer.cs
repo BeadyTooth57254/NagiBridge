@@ -41,6 +41,12 @@ public class FarmhandServer
     private readonly IModHelper _helper;
     private List<object>? _forgeEnchantments; // cached Pick Forge Enchantment tool->enchant map
 
+    /// <summary>Called on the game thread when the AI sends an in-game chat message; the
+    /// owner (ModEntry) routes it to the mod's own chat panel so the player can actually
+    /// see it (the vanilla Game1.chatBox only renders on one player's viewport, so it was
+    /// invisible to the AI-farmhand view).</summary>
+    public Action<string>? ChatDisplay;
+
 
     public FarmhandServer(ModConfig config, IMonitor monitor, bool isHost, IModHelper helper)
     {
@@ -1475,7 +1481,11 @@ public class FarmhandServer
     {
         if (!Context.IsWorldReady) throw new InvalidOperationException("World not ready");
         string message = GetReq<string>(ReadJson(ctx), "message");
-        Enqueue(() => Game1.chatBox?.addMessage(message, Color.White));
+        Enqueue(() =>
+        {
+            Game1.chatBox?.addMessage(message, Color.White);   // keep the vanilla channel (harmless)
+            ChatDisplay?.Invoke(message);                      // route to the mod's player-visible panel
+        });
         return new { ok = true, message };
     }
 
