@@ -31,7 +31,6 @@ public class CompatLayer
         ("Pathoschild.ContentPatcher",    "Content Patcher (数据/贴图)"),
         ("Pathoschild.Automate",          "Automate (自动化机器)"),
         ("Pathoschild.TractorMod",        "Tractor Mod (拖拉机)"),
-        ("Pathoschild.TractorMod",        "Tractor Mod (拖拉机)"),
         ("DaLion.Professions",            "Walk Of Life - Rebirth (职业循环)"),
         ("Cornucopia.MoreFlowers",        "Cornucopia 更多花 (自定义作物)"),
         ("MissAnaira.StarCrops",          "Star Crops (星空作物)"),
