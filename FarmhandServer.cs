@@ -564,6 +564,16 @@ public class FarmhandServer
                 shirtEffects = ReadConfigProp("LunaticShade.SkillfulClothes", "EnableShirtEffects"),
                 pantsEffects = ReadConfigProp("LunaticShade.SkillfulClothes", "EnablePantsEffects"),
                 hatEffects = ReadConfigProp("LunaticShade.SkillfulClothes", "EnableHatEffects")
+            } : null,
+            letsMoveIt = IsModLoaded("Exblosis.LetsMoveIt") ? new
+            {
+                active = true,
+                modKey = ReadConfigProp("Exblosis.LetsMoveIt", "ModKey"),
+                moveKey = ReadConfigProp("Exblosis.LetsMoveIt", "MoveKey"),
+                moveBuilding = ReadConfigProp("Exblosis.LetsMoveIt", "EnableMoveBuilding"),
+                moveObject = ReadConfigProp("Exblosis.LetsMoveIt", "EnableMoveObject"),
+                moveTree = ReadConfigProp("Exblosis.LetsMoveIt", "EnableMoveTree"),
+                moveCrop = ReadConfigProp("Exblosis.LetsMoveIt", "EnableMoveCrop")
             } : null
         };
     }
