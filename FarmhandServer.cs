@@ -40,7 +40,7 @@ public class FarmhandServer
 
     private readonly IModHelper _helper;
     private List<object>? _forgeEnchantments; // cached Pick Forge Enchantment tool->enchant map
-    private string? _modsRoot;                 // cached Mods root (parent of this mod)
+
 
     public FarmhandServer(ModConfig config, IMonitor monitor, bool isHost, IModHelper helper)
     {
@@ -858,21 +858,31 @@ public class FarmhandServer
     }
 
     /// <summary>Locate a mod's folder by scanning the Mods root for a matching manifest UniqueID.</summary>
+    /// <summary>Return a loaded mod's install directory by scanning the Mods root
+    /// (the parent of this mod's own directory) and matching its manifest's UniqueID.
+    /// Each entry is handled in its own try/catch: one malformed or content-pack
+    /// manifest elsewhere in the folder must not abort the whole scan (this is a real
+    /// failure mode — a single bad JSON manifest used to make every config read null).</summary>
     private string? FindModDir(string uniqueId)
     {
         try
         {
-            _modsRoot ??= Path.GetDirectoryName(_helper.DirectoryPath) ?? "";
-            foreach (var sub in Directory.GetDirectories(_modsRoot))
+            var root = Path.GetDirectoryName(_helper.DirectoryPath) ?? "";
+            if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return null;
+            foreach (var sub in Directory.GetDirectories(root))
             {
-                string m = Path.Combine(sub, "manifest.json");
-                if (!File.Exists(m)) continue;
-                var doc = JsonDocument.Parse(File.ReadAllText(m));
-                if (doc.RootElement.TryGetProperty("UniqueID", out var id) && id.GetString() == uniqueId)
-                    return sub;
+                try
+                {
+                    string m = Path.Combine(sub, "manifest.json");
+                    if (!File.Exists(m)) continue;
+                    using var doc = JsonDocument.Parse(File.ReadAllText(m));
+                    if (doc.RootElement.TryGetProperty("UniqueID", out var id) && id.GetString() == uniqueId)
+                        return sub;
+                }
+                catch { /* a bad manifest shouldn't break the whole scan */ }
             }
         }
-        catch { /* if the Mods folder isn't listed, just return null */ }
+        catch { /* Mods root unavailable; treat as not found */ }
         return null;
     }
 
