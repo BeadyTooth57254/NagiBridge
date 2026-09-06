@@ -3,6 +3,7 @@
 给星露谷用的 AI 聊天 + farmhand 操控模组。这一版是**完全原创的干净代码**，不依赖上游 `anqinou-art/NagiBridge` 的未授权代码。
 > 致敬：本作是对 [anqinou-art/NagiBridge](https://github.com/anqinou-art/NagiBridge) 的**干净重写**，实现代码为原创、未借上游代码；上游仓库无 LICENSE（默认 all rights reserved），本作不受其约束。README.md 为英文主说明，中文详见 [README.zh-CN.md](README.zh-CN.md)。
 > 编写：代码由 **AI 代理（垛口 / a sentinel）** 编写，由 **BeadyTooth57254** 执导并持有版权。这是一份诚实披露：本项目代码为 AI 所写。
+> 许可：以 **GNU AGPL-3.0** 发布（强 copyleft）；商用允许，但**衍生作品与网络运行**都须**保持开源并给出源码**（§13 网络条款）。版权归 BeadyTooth57254。详见 [LICENSE](LICENSE)。
 
 ## 构建 / 部署
 
