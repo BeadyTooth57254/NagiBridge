@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewValley;
 
-namespace NagiBridge;
+namespace WheatStook;
 
 public sealed class PrairieKingBot
 {
@@ -71,7 +71,7 @@ public sealed class PrairieKingBot
             {
                 try
                 {
-                    var harmony = new Harmony("NagiBridge.PrairieKingBot");
+                    var harmony = new Harmony("WheatStook.PrairieKingBot");
                     var agType = Game1.currentMinigame!.GetType();
                     var updateInput = agType.GetMethod("_UpdateInput", BindingFlags.NonPublic | BindingFlags.Instance)
                         ?? agType.GetMethod("UpdateInput", BindingFlags.NonPublic | BindingFlags.Instance);

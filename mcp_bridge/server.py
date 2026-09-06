@@ -90,7 +90,7 @@ async def get_state() -> str:
 
 @mcp.tool()
 async def ctx(radius: int = 8) -> str:
-    """ASCII text map of tiles around the farmer (radius 1-20, default 8). Symbols: P player, C crop, M machine, T tree, . open, # wall, o object."""
+    """Block map around the farmer, centred on the AI farmhand (not the host player). Default is an ASCII grid: P player, C crop, M machine, T tree, N npc, o object, # blocked, . open — plus the structured tile data. Set config stateOutput=image to get a base64 BMP image instead (default off, text)."""
     return await _tool("ctx", {"radius": radius})
 
 
@@ -170,6 +170,18 @@ async def emote(id: int) -> str:
 async def warp(location: str, x: int = 0, y: int = 0) -> str:
     """Warp the farmer to a named location (optional x/y tile)."""
     return await _tool("warp", {"location": location, "x": x, "y": y})
+
+
+@mcp.tool()
+async def menu() -> str:
+    """Read the currently open menu. If a shop is open, returns the items for sale with name, price and stock; works for any shop, so modded shop items (e.g. Marnie's Auto-Petters, Robin Sells Big Craftables, Shop Tabs) are covered too."""
+    return await _tool("menu", {})
+
+
+@mcp.tool()
+async def buy(index: int, count: int = 1) -> str:
+    """Buy 'count' (default 1) of the shop item at 'index' from the currently open shop (open a shop first, then read 'menu' to find the index). Checks stock/money, then buys on the game thread and returns what was bought."""
+    return await _tool("buy", {"index": index, "count": count})
 
 
 @mcp.tool()

@@ -1,0 +1,36 @@
+[
+  // ===========================================================================
+  //  NagiBridge 数据驱动兼容规则  (CompatRules.json)
+  //
+  //  这里教 AI 认"原版没有的东西"——纯数据、不用写代码。改完存盘，重开游戏
+  //  或 SMAPI 里重载本模组即生效。
+  //
+  //  ● 每条规则生效的前提：那个 Mod 已安装，且它的兼容 profile 是【激活】的
+  //    (要么 config.json 里 enableAutoCompat 开，要么在 compatOverrides 里强开)。
+  //  ● 匹配：MatchIdContains 匹配对象/物品的 QualifiedItemId，MatchName 匹配显示名。
+  //    留空 = 该项不检查；两个都填则【都要】满足。
+  //  ● 真实 id/名字：开游戏后用 wheatstook_selftest 或看 /state、/surroundings，
+  //    把想认的东西实际读成什么样核一下，再填准确值。
+  //  ● 下面的行是【示例】，值只是演示。照格式抄、换成你自己的 Mod UniqueID 和匹配串。
+  //  ===========================================================================
+
+  {
+    // 示例1：把"显示名/ID 里含 berry 的对象"标成可采摘的浆果灌木
+    "Mod": "TntDove.PBB",              // 这个模组的 UniqueID (宝可梦浆果灌木)
+    "Label": "可摘的浆果灌木",          // 给 AI 看的简短说明
+    "MatchIdContains": "berry",        // ID 里含 berry (请按 /state 实测值改)
+    "MatchName": "berry",              // 显示名里含 berry
+    "Category": "berryBush",           // 语义标签，AI 能看懂是"灌木"
+    "Harvestable": true,               // 标记：可采摘
+    "Collectible": true                // 标记：可捡取的采集物
+  },
+
+  {
+    // 示例2：把"显示名里含 cask 的对象"标成可操作的加工机
+    "Mod": "DIGUS.CustomCaskMod",      // 自定义酒桶 (Custom Cask Mod)
+    "Label": "可放物的酒桶",
+    "MatchName": "cask",
+    "Category": "caskMachine",
+    "Processable": true                // 标记：可放入/操作
+  }
+]

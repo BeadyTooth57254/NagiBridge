@@ -1,0 +1,63 @@
+{
+  "_说明_总览": "这是【示例配置 config.example.json】，给你照抄和参考，模组不会直接读它。凡是 _ 开头的字段都只是说明文字，模组会忽略；你把真实字段复制进 config.json 即可。字段还没完全定稿，会随我们架构逐步补全。",
+
+  "Mode": "operit",
+  "_说明_Mode": "聊天后端：填 operit 就走 MCP 桥（AI 联机聊天 + 操控 farmhand）。",
+
+  "HostPort": 58331,
+  "_说明_HostPort": "host 实例绑定的端口（你是主玩家）。默认 58331。",
+  "FarmhandPort": 58332,
+  "_说明_FarmhandPort": "farmhand 实例绑定的端口（AI 操控的那个角色）。默认 58332。",
+
+  "OperitBridgeUrl": "http://127.0.0.1:8000",
+  "_说明_OperitBridgeUrl": "MCP 桥地址。默认本机 8000；手机连要填电脑局域网 IP，例如 http://192.168.100.236:8000。",
+  "OperitBridgeToken": "<你的共享 token>",
+  "_说明_OperitBridgeToken": "和桥一致的 Bearer token。留空则桥不鉴权（不安全，不建议）。",
+
+  "forwardToOperitChat": false,
+  "_说明_forwardToOperitChat": "是否把游戏里的消息也转发到 Operit 原生对话（默认关，按需开）。这条走的是 Operit 网页后端那条直连通道，和上面那条 MCP 桥是两条路。",
+  "operitWebUrl": "http://<Operit端点>:8094",
+  "_说明_operitWebUrl": "Operit 网页后端地址。占位符——IP 会变、且是你设备隐私，别写死。",
+  "operitWebChatId": "<Operit 对话号>",
+  "_说明_operitWebChatId": "要写入的 Operit 对话 id（例如 ds-0-xxx）。留空则用最近的对话。",
+  "operitWebToken": "<Operit Bearer token>",
+  "_说明_operitWebToken": "Operit 网页会话的 Bearer token（隐私），只放配置，绝不提交、绝不公开。",
+  "forwardReadOperitReply": false,
+  "_说明_forwardReadOperitReply": "开启转发后，是否也把 operit 的回复读回来（默认关=只送达、省 token；开=把 SSE 流读完、拿到完整回复）。",
+  "operitForwardFormat": "【星露谷·{sender}】{message}",
+  "_说明_operitForwardFormat": "转发到 Operit 原生对话时给消息加的注明模板。{sender}=游戏内发送者（如 host=主权），{message}=消息正文。这样 operit 一看就知道是星露谷里发来的，不会当普通聊天接。",
+
+  "chunkSize": 5,
+  "_说明_chunkSize": "地图分块的边长（格数）。默认 5 = 一块正好盖住一次最大铱制工具动作；可调。",
+  "readWindow": "tool",
+  "_说明_readWindow": "读取窗口：tool（仅中心一块）/ beehouse（中心+上下左右共5块）/ navigate（沿路径的块）/ explore（整片 3x3）。",
+  "stateOutput": "text",
+  "_说明_stateOutput": "地图/状态形式：text（默认，ASCII 方块图 + 结构化格子数据，谁都可用、最省）/ image（渲染成 base64 BMP 小图，需模型能看图；默认关）。",
+
+  "enableModKnowledge": true,
+  "_说明_enableModKnowledge": "是否在启动时读取已装模组列表，供 AI 按需查询。",
+  "sourceReadDepth": "intro",
+  "_说明_sourceReadDepth": "模组用法读取深度：intro（只看N网介绍）/ source（介绍不够再翻源码）/ deep（白名单模组直接深读）。",
+  "modWhitelist": ["需要始终精确深读的模组 UniqueID"],
+  "_说明_modWhitelist": "总是直接读源码的模组（白名单）。",
+  "modBlacklist": ["只读介绍、不读源码的模组 UniqueID"],
+  "_说明_modBlacklist": "只读介绍、绝不读源码的模组（黑名单）。",
+  "cacheModUsage": true,
+  "_说明_cacheModUsage": "正确的模组调用成功后写入缓存，下次直接读，不再重复读源码。",
+  "includeMemoryInForward": false,
+  "_说明_includeMemoryInForward": "是否把长期记忆（wheatstook_memory.txt 里的内容）在每次转发时也带给 operit，让它记得过去的事（默认关=省 token；开=AI 更有记性）。记忆用 wheatstook_mem add 命令写入。",
+  "reactionEnabled": false,
+  "_说明_reactionEnabled": "是否让 AI 对游戏事件自动有反应（默认关，按需开）。目前每天清晨生成一行简讯（日期/金币/精力）发给 operit 并显示在面板；后续会补更多事件（升级、作物熟了、没体力等）。",
+
+  "enableAutoCompat": false,
+  "_说明_enableAutoCompat": "自动兼容层（默认关）。开=启动时检测到会改变游戏世界的模组（加戒指槽/超大背包/自定义作物/新地区/职业循环等，按 UniqueId 识别，不看文件夹名）就自动激活对应兼容 profile，并把激活列表写进 /state，让 AI 知道这农场不是原版。",
+  "compatOverrides": null,
+  "_说明_compatOverrides": "按 UniqueId 强制开/关某个兼容 profile，优先级高于自动检测。例：{\"bcmpinc.WearMoreRings\": true, \"spacechase0.BiggerBackpack\": false}。",
+
+  "keybindChatPanel": "OemTilde",
+  "_说明_keybindChatPanel": "打开/关闭聊天面板的按键（默认是反引号）。",
+  "keybindBridgeToggle": "F8",
+  "_说明_keybindBridgeToggle": "切换/查看 MCP 桥连接状态的按键。",
+  "keybindHelp": "F1",
+  "_说明_keybindHelp": "呼出帮助/配置说明的按键。"
+}

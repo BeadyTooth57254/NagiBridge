@@ -1,10 +1,10 @@
 {
-  "Name": "NagiBridge",
-  "Author": "Nagi",
+  "Name": "麦垛 (WheatStook)",
+  "Author": "BeadyTooth57254",
   "Version": "1.0.0",
   "Description": "HTTP/MCP bridge for in-game AI chat and external control of a co-op farmhand.",
-  "UniqueID": "Nagi.NagiBridge",
-  "EntryDll": "NagiBridge.dll",
+  "UniqueID": "BeadyTooth57254.WheatStook",
+  "EntryDll": "WheatStook.dll",
   "MinimumApiVersion": "3.0.0",
   "UpdateKeys": []
 }

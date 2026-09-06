@@ -1,6 +1,10 @@
 MIT License
 
-Copyright (c) 2026 anqinou-art (original NagiBridge) & BeadyTooth57254 (co-op / MCP bridge additions)
+Copyright (c) 2026 BeadyTooth57254
+
+This is a clean-room reimplementation inspired by anqinou-art/NagiBridge. The code here is original and does not incorporate upstream code. (Credit to the original project's author for the concept.)
+
+The code was authored by an AI agent (垛口 / a sentinel) under the direction and ownership of BeadyTooth57254, who holds the copyright.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

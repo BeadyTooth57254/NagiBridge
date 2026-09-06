@@ -1,6 +1,8 @@
-# NagiBridge
+# 麦垛 WheatStook
 
 [English](README.md) | **中文**
+
+> 编写：代码由 **AI 代理（垛口 / 哨兵）** 编写，由 **BeadyTooth57254** 执导并持有版权。本项目为**干净重写**，实现代码为**原创、未借上游代码**（详见文末开源许可）。
 
 适用于 **联机(co-op)** 的星露谷物语 SMAPI 模组：它把你的游戏变成一台 HTTP/MCP 可控的实例，
 让一个 AI 助手（比如手机上的 **operit**）能 **在游戏里跟你聊天**，并 **操控一个 farmhand 农夫**。
@@ -28,11 +30,11 @@
 
 ## 安装（玩家）
 
-> 发布包里已带编译好的 `NagiBridge.dll`——**不需要自己编译**。
+> 发布包里已带编译好的 `WheatStook.dll`——**不需要自己编译**。
 
 1. 安装 [SMAPI](https://smapi.io/)。
 2. 下载最新发布包并解压。
-3. 把 `NagiBridge` 文件夹放进 `Stardew Valley/Mods/`。
+3. 把 `麦垛 WheatStook` 文件夹放进 `Stardew Valley/Mods/`。
 4. 用 SMAPI 启动游戏。
 
 支持 **Stardew Valley 1.6+ / SMAPI 4.0+**。同一个 `.dll` 在 Windows、macOS、Linux 上都能用。
@@ -49,7 +51,7 @@ dotnet build -c Release
 
 ## 联机设置
 
-host 和 farmhand 都加载 NagiBridge；角色由"是否为主玩家"自动决定。
+host 和 farmhand 都加载 麦垛；角色由"是否为主玩家"自动决定。
 
 `config.json`（两个实例共用同一份）：
 
@@ -129,5 +131,6 @@ operit 用 `read_ingame` 读取，用 `send_ingame` 回复，桥再通过 `/chat
 
 ## 开源许可
 
-基于 [MIT License](LICENSE) 发布。原始框架版权归
-[anqinou-art](https://github.com/anqinou-art/NagiBridge)；co-op / MCP 桥等适配由 BeadyTooth57254 添加。
+基于 [MIT License](LICENSE) 发布，版权归 **BeadyTooth57254**。
+
+> 致敬：本作是对 [anqinou-art/NagiBridge](https://github.com/anqinou-art/NagiBridge) 的**干净重写**，实现代码为**原创、未借上游代码**，不是从上游衍生的"适配版"。上游仓库无 LICENSE（默认 all rights reserved），本作不受其约束，也未使用其代码。

@@ -5,13 +5,21 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Deploy to the actual mod folder Es uses (renamed from the default "NagiBridge"). -->
-    <ModFolderName>[AI聊天]NagiBridge</ModFolderName>
+    <!-- Renamed from the upstream branding (NagiBridge) to 麦垛/WheatStook. -->
+    <AssemblyName>WheatStook</AssemblyName>
+    <!-- Deploy to the actual mod folder Es uses. -->
+    <ModFolderName>[AI聊天]麦垛 WheatStook</ModFolderName>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="mods\NagiCalicoBot\**" />
-    <Compile Remove="mods\NagiFestivalBots\FestivalModEntry.cs" />
+    <!--
+      Clean-room rewrite: compile only the original source. ChatHud is now our own
+      clean-room rewrite, so it IS compiled. LlmClient and everything under mods\
+      are excluded here and migrated (replaced with original code) piece by piece.
+      Update this list as those are rewritten.
+    -->
+    <Compile Remove="LlmClient.cs" />
+    <Compile Remove="mods\**" />
   </ItemGroup>
 
   <!--

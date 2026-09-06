@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace NagiBridge;
+namespace WheatStook;
 
 public class LlmClient
 {
@@ -22,7 +22,7 @@ public class LlmClient
         _config = config;
         _historyPath = modPath != null
             ? Path.Combine(modPath, "chat_history.json")
-            : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Mods", "NagiBridge", "chat_history.json");
+            : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Mods", "WheatStook", "chat_history.json");
         LoadHistory();
     }
 

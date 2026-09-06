@@ -11,7 +11,7 @@
 
 游戏只跑在你电脑上，桥只负责转发。**你在家、手机和电脑同一 Wi-Fi** → 用局域网模式，零云开销；**人不在家** → 用云端模式，手机走公网到你的桥再下到电脑。
 
-- **`server.py`**：桥。暴露 17 个工具 + `/tunnel` 隧道 + `/health`。绑定 `0.0.0.0`，局域网和云端都能用。
+- **`server.py`**：桥。暴露 **19 个工具** + `/tunnel` 隧道 + `/health`。绑定 `0.0.0.0`，局域网和云端都能用。
 - **`client.py`**：电脑端常驻。可连**多个**桥（逗号分隔），把手机发来的方法转成游戏 HTTP 调用：AI 控制走 **farmhand**(`NAGI_GAME_URL`，默认 `http://localhost:58332`)，聊天回推走 **host**(`NAGI_HOST_URL`，默认 `http://localhost:58331`)。
 
 ---
@@ -122,3 +122,14 @@ python client.py
 ## 加工具
 
 `server.py` 加一个 `@mcp.tool()`，再到 `client.py` 的 `ROUTES` 里登记对应的 HTTP 映射即可。
+
+## 商店买卖（`menu` / `buy`）
+
+AI 想让 farmhand **买东西**的闭环：
+
+1. 走到店老板跟前，`press_key("confirm")` / `confirm` 打开商店。
+2. 调 **`menu`** —— 读出打开的商店在卖什么、单价、库存（`shop.items`，每项 `name`/`price`/`stock`）。因为读的是打开的 `ShopMenu`，**Marnie's Auto-Petters（玛尼卖自动抚摸机）、Robin Sells Big Craftables（罗宾卖大型制作物）、Shop Tabs（交易选项卡）**这些 CP/UI 模组加进商店的货都自动在内。
+3. 调 **`buy(index, count)`** —— 按 `menu` 返回的下标 `index` 买 `count` 件。只读校验（有货、钱够、是普通物品），再在游戏线程扣钱 + 塞背包，返回 `queued: true`；可用 `get_state` 看 money/背包核对到货。
+
+> 限制：**建筑类商品**（如 `Data/Buildings` 的建房子/建筑）不是普通 `Item`，`buy` 会报错，得在本机商店 UI 手动买。
+> 入队执行是**下一游戏刻**生效，所以 `buy` 返回后请用 `get_state` 再核对一次。

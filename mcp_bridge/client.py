@@ -111,6 +111,7 @@ ROUTES = {
     "warp": ("POST", "/warp", {"location": None, "x": None, "y": None}),
     "chat": ("POST", "/chat", {"message": None}),
     "select": ("POST", "/select", {"name": None}),
+    "buy": ("POST", "/buy", {"index": None, "count": None}),
 }
 
 # Methods that target the HOST game (the player) rather than the farmhand — used for in-game chat replies.
