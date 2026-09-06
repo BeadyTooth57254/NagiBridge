@@ -206,6 +206,12 @@ async def send_ingame(message: str) -> str:
     return await _tool("send_ingame", {"sender": "Nagi", "message": message})
 
 
+@mcp.tool()
+async def chat(message: str) -> str:
+    """Send an in-game chat message from THIS farmhand into the shared Stardew chat box (the farmhand game, port 58332). Use this — not send_ingame — when the farmhand AI should speak in-game in front of the player. send_ingame targets the separate host player's game (port 58331) and only works when that host instance is also running; on a farmhand-only session it will fail with a connection error."""
+    return await _tool("chat", {"message": message})
+
+
 # ── build the root Starlette app and add our routes on top ──
 
 app = mcp.streamable_http_app()  # must stay the ROOT app so /mcp works
