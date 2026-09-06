@@ -1402,14 +1402,19 @@ public class FarmhandServer
         bool isValuable = farmer?.CurrentTool != null ||
                           (farmer?.ActiveObject != null && farmer.ActiveObject.Category == StardewValley.Object.SeedsCategory);
         if (isValuable && !Get(p, "confirm", false))
-            return new { ok = false, error = $"You're holding '{item}' (a tool/seed). Drop removes it from your inventory permanently — pass confirm:true to proceed." };
+            return new { ok = false, error = $"You're holding '{item}' (a tool/seed). Drop places it on the ground (recoverable) and removes it from your inventory — pass confirm:true to proceed." };
         Enqueue(() =>
         {
             var f = Game1.player;
             if (f is null) return;
+            // Actually place a ground Debris at the farmer's feet (recoverable by walking
+            // over it), then take one from the inventory — not just silently consume it.
+            Item? held = f.CurrentTool != null ? f.CurrentTool : (Item?)f.ActiveObject;
+            if (held is null) return;
+            Game1.createItemDebris(held.getOne(), f.Position, 1);
             f.reduceActiveItemByOne();
         });
-        return new { ok = true, item, warning = $"Dropped '{item}' — it was removed from your inventory and now lies on the ground." };
+        return new { ok = true, item, warning = $"Dropped '{item}' on the ground at your feet — walk onto it to pick it back up." };
     }
 
     private object HandleFollow(HttpListenerContext ctx)
