@@ -27,6 +27,15 @@
 | 祝尼魔小屋 | `isJunimoHut` + 读 config 范围 | Better Junimos |
 | 自动钓鱼 | 读 config 按键 + 自动关停规则 | Fishing Assistant |
 | 传送点 | 扫名为 Obelisk 的物件 | Multiple Mini Obelisks |
+| 骷髅电梯 | `skullCavernElevator` 读 config (每N层/是否收费) | Skull Cavern Elevator |
+| 自动门 | `automaticGates` 读 config (gateDelayMs) | Automatic Gates |
+| 海滩补给箱 | `supplyCrates` 读 config (概率/天数) | Supply Crates on Beach |
+| 种子掉落 | `seedDrop` 读 config (概率/保底) | Harvest Seeds Continued |
+| 怪物密度 | `moreMonsters` 读 config (spawnMultiplier) | More Monsters |
+| 衣服加成 | `skillfulClothes` 读 config (衣/裤/帽) | Skillful Clothes |
+| 移动一切 | `letsMoveIt` 读 config (按键/可移动类别) | Lets Move It |
+
+> 上面这批是**读 config 值**的 readout（`/state` 的 `mods.*` 字段），未装该模组则字段不出现。
 
 **数据驱动规则（连代码都不用写）**：直接编辑模组目录的 **`CompatRules.json`**（带注释的 JSON，SMAPI 能读注释），给"原版没有的东西"贴标签（`MatchIdContains`/`MatchName`/`Category`/`Harvestable`/`Collectible`…）。仓库带了一份示例。**那条规则生效的前提**：该模组已装 + profile 激活（开 `enableAutoCompat` 或在 `compatOverrides` 强开）。
 
