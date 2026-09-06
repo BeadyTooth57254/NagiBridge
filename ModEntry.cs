@@ -6,15 +6,16 @@ using StardewValley;
 namespace WheatStook;
 
 // Minimal GMCM API surface for the optional in-game config menu, matching the
-// canonical GenericModConfigMenu 1.x shape (RegisterSimpleOption is non-generic
-// and string-typed). GetApi is wrapped in try/catch so an API-shape mismatch is
-// silently skipped rather than logging an alarming stack trace.
+// canonical GenericModConfigMenu 1.x shape (Register + Add*Option*, whose labels
+// are Func<string> for tokenization). GetApi is wrapped in try/catch so an API-
+// shape mismatch is silently skipped rather than logging an alarming stack trace.
 public interface IGenericModConfigMenuApi
 {
-    void RegisterModConfig(IManifest mod, Action revertToDefault, Action save);
-    void UnregisterModConfig(IManifest mod);
-    void RegisterLabel(IManifest mod, string name, string description);
-    void RegisterSimpleOption(IManifest mod, string name, string description, Func<string> get, Action<string> set, string? fieldId = null, string? fieldTitle = null);
+    void Register(IManifest mod, Action reset, Action save, bool titleScreenOnly = false);
+    void AddSectionTitle(IManifest mod, Func<string> text, Func<string>? tooltip = null);
+    void AddBoolOption(IManifest mod, Func<bool> getValue, Action<bool> setValue, Func<string> name, Func<string>? tooltip = null, string? fieldId = null);
+    void AddNumberOption(IManifest mod, Func<int> getValue, Action<int> setValue, Func<string> name, Func<string>? tooltip = null, int? min = null, int? max = null, int? interval = null, Func<int, string>? formatValue = null, string? fieldId = null);
+    void AddTextOption(IManifest mod, Func<string> getValue, Action<string> setValue, Func<string> name, Func<string>? tooltip = null, string[]? allowedValues = null, Func<string, string>? formatAllowedValue = null, string? fieldId = null);
 }
 
 /// <summary>
@@ -138,24 +139,24 @@ public class ModEntry : Mod
         }
         try
         {
-            api.RegisterModConfig(
+            api.Register(
                 modManifest,
                 () => { _config = new ModConfig(); Helper.WriteConfig(_config!); ApplyConfig(); },
                 () => { Helper.WriteConfig(_config!); ApplyConfig(); });
-            api.RegisterLabel(modManifest, "麦垛 (WheatStook)", "AI 聊天 + farmhand 控制（干净封装）");
-            api.RegisterSimpleOption(modManifest, "Mode", "聊天后端", () => _config!.Mode, v => _config!.Mode = v);
-            api.RegisterSimpleOption(modManifest, "HostPort", "host 实例端口", () => _config!.HostPort.ToString(), v => _config!.HostPort = int.TryParse(v, out var hp) ? hp : _config!.HostPort);
-            api.RegisterSimpleOption(modManifest, "FarmhandPort", "farmhand 实例端口", () => _config!.FarmhandPort.ToString(), v => _config!.FarmhandPort = int.TryParse(v, out var fp) ? fp : _config!.FarmhandPort);
-            api.RegisterSimpleOption(modManifest, "forwardToOperitChat", "转发到 Operit 原生对话", () => _config!.forwardToOperitChat.ToString(), v => _config!.forwardToOperitChat = bool.TryParse(v, out var b) && b);
-            api.RegisterSimpleOption(modManifest, "forwardReadOperitReply", "读回 Operit 回复", () => _config!.forwardReadOperitReply.ToString(), v => _config!.forwardReadOperitReply = bool.TryParse(v, out var b) && b);
-            api.RegisterSimpleOption(modManifest, "includeMemoryInForward", "转发时带回忆", () => _config!.includeMemoryInForward.ToString(), v => _config!.includeMemoryInForward = bool.TryParse(v, out var b) && b);
-            api.RegisterSimpleOption(modManifest, "reactionEnabled", "AI 对事件有反应", () => _config!.reactionEnabled.ToString(), v => _config!.reactionEnabled = bool.TryParse(v, out var b) && b);
-            api.RegisterSimpleOption(modManifest, "chunkSize", "地图分块边长", () => _config!.chunkSize.ToString(), v => _config!.chunkSize = int.TryParse(v, out var cs) && cs > 0 ? cs : _config!.chunkSize);
-            api.RegisterSimpleOption(modManifest, "readWindow", "读取窗口 (tool/beehouse/navigate/explore)", () => _config!.readWindow, v => _config!.readWindow = v);
-            api.RegisterSimpleOption(modManifest, "stateOutput", "状态输出 (text/image/auto)", () => _config!.stateOutput, v => _config!.stateOutput = v);
-            api.RegisterSimpleOption(modManifest, "keybindChatPanel", "聊天面板按键", () => _config!.keybindChatPanel, v => _config!.keybindChatPanel = v);
-            api.RegisterSimpleOption(modManifest, "keybindBridgeToggle", "转发开关按键", () => _config!.keybindBridgeToggle, v => _config!.keybindBridgeToggle = v);
-            api.RegisterSimpleOption(modManifest, "keybindHelp", "帮助按键", () => _config!.keybindHelp, v => _config!.keybindHelp = v);
+            api.AddSectionTitle(modManifest, () => "麦垛 (WheatStook)", () => "AI 聊天 + farmhand 控制（干净封装）");
+            api.AddTextOption(modManifest, () => _config!.Mode, v => _config!.Mode = v, () => "Mode", () => "聊天后端");
+            api.AddNumberOption(modManifest, () => _config!.HostPort, v => _config!.HostPort = v, () => "HostPort", () => "host 实例端口");
+            api.AddNumberOption(modManifest, () => _config!.FarmhandPort, v => _config!.FarmhandPort = v, () => "FarmhandPort", () => "farmhand 实例端口");
+            api.AddBoolOption(modManifest, () => _config!.forwardToOperitChat, v => _config!.forwardToOperitChat = v, () => "forwardToOperitChat", () => "转发到 Operit 原生对话");
+            api.AddBoolOption(modManifest, () => _config!.forwardReadOperitReply, v => _config!.forwardReadOperitReply = v, () => "forwardReadOperitReply", () => "读回 Operit 回复");
+            api.AddBoolOption(modManifest, () => _config!.includeMemoryInForward, v => _config!.includeMemoryInForward = v, () => "includeMemoryInForward", () => "转发时带回忆");
+            api.AddBoolOption(modManifest, () => _config!.reactionEnabled, v => _config!.reactionEnabled = v, () => "reactionEnabled", () => "AI 对事件有反应");
+            api.AddNumberOption(modManifest, () => _config!.chunkSize, v => _config!.chunkSize = v, () => "chunkSize", () => "地图分块边长");
+            api.AddTextOption(modManifest, () => _config!.readWindow, v => _config!.readWindow = v, () => "readWindow", () => "读取窗口 (tool/beehouse/navigate/explore)");
+            api.AddTextOption(modManifest, () => _config!.stateOutput, v => _config!.stateOutput = v, () => "stateOutput", () => "状态输出 (text/image/auto)");
+            api.AddTextOption(modManifest, () => _config!.keybindChatPanel, v => _config!.keybindChatPanel = v, () => "keybindChatPanel", () => "聊天面板按键");
+            api.AddTextOption(modManifest, () => _config!.keybindBridgeToggle, v => _config!.keybindBridgeToggle = v, () => "keybindBridgeToggle", () => "转发开关按键");
+            api.AddTextOption(modManifest, () => _config!.keybindHelp, v => _config!.keybindHelp = v, () => "keybindHelp", () => "帮助按键");
             Monitor.Log("GMCM config menu registered.", LogLevel.Info);
         }
         catch (Exception ex)
