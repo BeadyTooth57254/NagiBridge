@@ -1,6 +1,6 @@
 @echo off
 echo =====================================================
-echo  NagiBridge - clear stuck host port 58331
+echo  WheatStook - clear stuck host port 58331
 echo =====================================================
 echo.
 echo  STEP 1: CLOSE both Stardew windows (host + farmhand)

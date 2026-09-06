@@ -1,6 +1,6 @@
-"""Tiny mock of the NagiBridge game HTTP API, for LOCAL bridge development only.
+"""Tiny mock of the WheatStook game HTTP API, for LOCAL bridge development only.
 
-Run on the game machine (or wherever the tunnel client points NAGI_GAME_URL) so the
+Run on the game machine (or wherever the tunnel client points WHEATSTOOK_GAME_URL) so the
 whole server->tunnel->client->game round-trip can be validated without opening Stardew.
 Defaults to port 58331 (the same the real mod uses).
 """
@@ -86,5 +86,5 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     import os
 
-    port = int(os.environ.get("NAGI_MOCK_PORT", "58331"))
+    port = int(os.environ.get("WHEATSTOOK_MOCK_PORT", "58331"))
     HTTPServer(("127.0.0.1", port), Handler).serve_forever()

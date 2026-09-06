@@ -1,4 +1,4 @@
-# NagiBridge 远程 MCP 桥
+# WheatStook 远程 MCP 桥
 
 把星露谷的游戏操控装成**远程 MCP**，手机上的 MCP 客户端（operit 等）连上来就能直接控局。**同一套代码支持两种模式**：在家走局域网直连，外出走云端，甚至两者同时挂。
 
@@ -6,19 +6,19 @@
 [手机 operit MCP 客户端]
       │  streamable HTTP
       ▼
-[桥 server.py]  ── WebSocket 隧道 ──►  [电脑 client.py]  ──►  [游戏内 NagiBridge HTTP API]
+[桥 server.py]  ── WebSocket 隧道 ──►  [电脑 client.py]  ──►  [游戏内 WheatStook HTTP API]
 ```
 
 游戏只跑在你电脑上，桥只负责转发。**你在家、手机和电脑同一 Wi-Fi** → 用局域网模式，零云开销；**人不在家** → 用云端模式，手机走公网到你的桥再下到电脑。
 
 - **`server.py`**：桥。暴露 **19 个工具** + `/tunnel` 隧道 + `/health`。绑定 `0.0.0.0`，局域网和云端都能用。
-- **`client.py`**：电脑端常驻。可连**多个**桥（逗号分隔），把手机发来的方法转成游戏 HTTP 调用：AI 控制走 **farmhand**(`NAGI_GAME_URL`，默认 `http://localhost:58332`)，聊天回推走 **host**(`NAGI_HOST_URL`，默认 `http://localhost:58331`)。
+- **`client.py`**：电脑端常驻。可连**多个**桥（逗号分隔），把手机发来的方法转成游戏 HTTP 调用：AI 控制走 **farmhand**(`WHEATSTOOK_GAME_URL`，默认 `http://localhost:58332`)，聊天回推走 **host**(`WHEATSTOOK_HOST_URL`，默认 `http://localhost:58331`)。
 
 ---
 
 ## 双实例 coop + 游戏内聊天（host 你玩，AI 当 farmhand）
 
-星露谷 coop 是 **host 起局 + farmhand 加入**，也就是两局（双实例）。NagiBridge 在两局都装上，各自**按角色**绑定自己的 HTTP 端口（`config.json` 的 `HostPort` / `FarmhandPort`）：
+星露谷 coop 是 **host 起局 + farmhand 加入**，也就是两局（双实例）。WheatStook 在两局都装上，各自**按角色**绑定自己的 HTTP 端口（`config.json` 的 `HostPort` / `FarmhandPort`）：
 
 | 实例 | 角色判定 | 端口（默认） | 用途 |
 |---|---|---|---|
@@ -27,7 +27,7 @@
 
 - **启动顺序无关紧要**：`EnsureServerStarted` 在进入存档后按 `IsMainPlayer` 判定角色，再绑对应端口；日志和 `/status` 会写明 `role=HOST|FARMHAND` 和端口，不会混淆。
 - **游戏内聊天 → operit**：host 的 Nagi 聊天面板（按 `` ` `` 打开），在 `config.json` 里设 `"Mode": "operit"` + `OperitBridgeUrl`（默认 `http://127.0.0.1:8000`）+ `OperitBridgeToken`（与桥一致）。你打的字会 POST 到桥 `/ingame-in`，operit 用 `read_ingame` 读到、用 `send_ingame` 回复，回复经桥 + 隧道推回 host 的面板（`/chat/push`）。
-- **AI 控 farmhand**：client 的 `NAGI_GAME_URL` 指 **58332**（farmhand）；`NAGI_HOST_URL` 指 **58331**（host，仅用于推聊天回复）。
+- **AI 控 farmhand**：client 的 `WHEATSTOOK_GAME_URL` 指 **58332**（farmhand）；`WHEATSTOOK_HOST_URL` 指 **58331**（host，仅用于推聊天回复）。
 
 ---
 
@@ -43,20 +43,20 @@
 **手动（等价，想自己来也可以）：**
 ```pwsh
 # ① 电脑上起桥（0.0.0.0:8000）
-$env:NAGI_BRIDGE_TOKEN='你的强密钥'
+$env:WHEATSTOOK_BRIDGE_TOKEN='你的强密钥'
 python server.py
 #   它会打印： Phone on home Wi-Fi (LAN): http://<电脑局域网IP>:8000/mcp
 
 # ② 电脑上起客户端（连本机桥）
-$env:NAGI_BRIDGE_TOKEN='你的强密钥'
-$env:NAGI_GAME_URL='http://localhost:58332'      # farmhand (AI 控的)
-$env:NAGI_HOST_URL='http://localhost:58331'      # host (游戏内聊天回推)
+$env:WHEATSTOOK_BRIDGE_TOKEN='你的强密钥'
+$env:WHEATSTOOK_GAME_URL='http://localhost:58332'      # farmhand (AI 控的)
+$env:WHEATSTOOK_HOST_URL='http://localhost:58331'      # host (游戏内聊天回推)
 python client.py
 ```
 
-**operit**：连接方式选 **streamable HTTP**，地址填 `http://<电脑局域网IP>:8000/mcp`，**鉴权选 Bearer Token，值填和电脑端一致的 `NAGI_BRIDGE_TOKEN`**（/mcp 默认就是要它，没它进不来）。
+**operit**：连接方式选 **streamable HTTP**，地址填 `http://<电脑局域网IP>:8000/mcp`，**鉴权选 Bearer Token，值填和电脑端一致的 `WHEATSTOOK_BRIDGE_TOKEN`**（/mcp 默认就是要它，没它进不来）。
 Windows 防火墙放行 TCP 8000。手机和电脑在同一 Wi-Fi 即可。
-若自动探测的 IP 不对（VPN/多网卡/无外网），设 `$env:NAGI_LAN_IP='<你的局域网IP>'` 再起桥。
+若自动探测的 IP 不对（VPN/多网卡/无外网），设 `$env:WHEATSTOOK_LAN_IP='<你的局域网IP>'` 再起桥。
 
 ---
 
@@ -64,15 +64,15 @@ Windows 防火墙放行 TCP 8000。手机和电脑在同一 Wi-Fi 即可。
 
 把桥部署到 Zeabur（或任意服务器），手机从公网连。
 
-1. **Zeabur**：部署 `server.py`，环境变量 `NAGI_BRIDGE_TOKEN`（和电脑端一致）、`PORT`（Zeabur 提供）。得到 `https://<your-app>`。
+1. **Zeabur**：部署 `server.py`，环境变量 `WHEATSTOOK_BRIDGE_TOKEN`（和电脑端一致）、`PORT`（Zeabur 提供）。得到 `https://<your-app>`。
 2. **电脑**：
 ```pwsh
-$env:NAGI_BRIDGE_TOKEN='你的强密钥'
-$env:NAGI_BRIDGE_URLS='wss://<your-app>/tunnel'
-$env:NAGI_GAME_URL='http://localhost:58332'      # farmhand (AI 控的)
+$env:WHEATSTOOK_BRIDGE_TOKEN='你的强密钥'
+$env:WHEATSTOOK_BRIDGE_URLS='wss://<your-app>/tunnel'
+$env:WHEATSTOOK_GAME_URL='http://localhost:58332'      # farmhand (AI 控的)
 python client.py
 ```
-3. **operit** 填 `https://<your-app>/mcp`（streamable HTTP），鉴权 Bearer Token 值填 `NAGI_BRIDGE_TOKEN`。
+3. **operit** 填 `https://<your-app>/mcp`（streamable HTTP），鉴权 Bearer Token 值填 `WHEATSTOOK_BRIDGE_TOKEN`。
 
 ---
 
@@ -81,9 +81,9 @@ python client.py
 电脑客户端用**逗号分隔**同时连多个桥，局域网 + 云端一起活着：
 
 ```pwsh
-$env:NAGI_BRIDGE_TOKEN='你的强密钥'
-$env:NAGI_BRIDGE_URLS='ws://127.0.0.1:8000/tunnel,wss://<your-app>/tunnel'   # local + cloud
-$env:NAGI_GAME_URL='http://localhost:58332'      # farmhand (AI 控的)
+$env:WHEATSTOOK_BRIDGE_TOKEN='你的强密钥'
+$env:WHEATSTOOK_BRIDGE_URLS='ws://127.0.0.1:8000/tunnel,wss://<your-app>/tunnel'   # local + cloud
+$env:WHEATSTOOK_GAME_URL='http://localhost:58332'      # farmhand (AI 控的)
 python client.py
 ```
 
@@ -96,27 +96,27 @@ python client.py
 | 变量 | 作用 | 默认 |
 |---|---|---|
 | `PORT`（server） | 监听端口 | 8000 |
-| `NAGI_LAN_IP`（server） | 覆盖自动探测的局域网 IP（VPN/多网卡/无外网时用） | 自动探测 |
-| `NAGI_BRIDGE_TOKEN` | 共享密钥，server/client 一致 | changeme（必改） |
-| `NAGI_BRIDGE_URLS`（client） | 逗号分隔的桥地址（可多个） | `ws://127.0.0.1:8000/tunnel` |
-| `NAGI_GAME_URL`（client） | farmhand（AI 控的）游戏 HTTP API | `http://localhost:58332` |
-| `NAGI_HOST_URL`（client） | host（玩家玩的）游戏 HTTP API，用于游戏内聊天回推 | `http://localhost:58331` |
-| `NAGI_MODS_JSON`（client） | 键位映射文件 | `../scripts/mods_keybinds.json` |
-| `NAGI_BRIDGE_MCP_AUTH`（server） | 是否要求 `/mcp` 带 `Authorization: Bearer <token>` | **开**（`1`） |
+| `WHEATSTOOK_LAN_IP`（server） | 覆盖自动探测的局域网 IP（VPN/多网卡/无外网时用） | 自动探测 |
+| `WHEATSTOOK_BRIDGE_TOKEN` | 共享密钥，server/client 一致 | changeme（必改） |
+| `WHEATSTOOK_BRIDGE_URLS`（client） | 逗号分隔的桥地址（可多个） | `ws://127.0.0.1:8000/tunnel` |
+| `WHEATSTOOK_GAME_URL`（client） | farmhand（AI 控的）游戏 HTTP API | `http://localhost:58332` |
+| `WHEATSTOOK_HOST_URL`（client） | host（玩家玩的）游戏 HTTP API，用于游戏内聊天回推 | `http://localhost:58331` |
+| `WHEATSTOOK_MODS_JSON`（client） | 键位映射文件 | `../scripts/mods_keybinds.json` |
+| `WHEATSTOOK_BRIDGE_MCP_AUTH`（server） | 是否要求 `/mcp` 带 `Authorization: Bearer <token>` | **开**（`1`） |
 
 健康检查：`GET /health` 应见 `{"ok":true,"gameConnected":<bool>}`（电脑端连上为 true）。
 
 ## 安全
 
-- `/mcp` **默认要求 Bearer token**（`NAGI_BRIDGE_MCP_AUTH=1`），operit 端鉴权填 Bearer、值 = `NAGI_BRIDGE_TOKEN`。没 token 一律 401，别关。
-- `NAGI_BRIDGE_TOKEN` 是真正的门，务必设**强随机**（别用 changeme）；关掉鉴权只在你完全信任网络时才做。
+- `/mcp` **默认要求 Bearer token**（`WHEATSTOOK_BRIDGE_MCP_AUTH=1`），operit 端鉴权填 Bearer、值 = `WHEATSTOOK_BRIDGE_TOKEN`。没 token 一律 401，别关。
+- `WHEATSTOOK_BRIDGE_TOKEN` 是真正的门，务必设**强随机**（别用 changeme）；关掉鉴权只在你完全信任网络时才做。
 - 局域网模式只暴露到你家 Wi-Fi；云端模式暴露公网，必须强 token + 保留 Bearer 鉴权。
 - 局域网桥**不要在路由器做端口转发**；只有云模式走公网。
 - 游戏必须开着 + 电脑端 client 挂着，/mcp 才有反应。
 
 ## 本地验证（不用游戏）
 
-- **工具链路**：三个终端，分别跑 `mock_game.py`、`server.py`（`NAGI_BRIDGE_TOKEN=t`）、`client.py`（连 `ws://127.0.0.1:8000/tunnel`，`NAGI_GAME_URL=http://localhost:58332`），再用任意 MCP 客户端连 `http://127.0.0.1:8000/mcp`，可看到工具并调用。
+- **工具链路**：三个终端，分别跑 `mock_game.py`、`server.py`（`WHEATSTOOK_BRIDGE_TOKEN=t`）、`client.py`（连 `ws://127.0.0.1:8000/tunnel`，`WHEATSTOOK_GAME_URL=http://localhost:58332`），再用任意 MCP 客户端连 `http://127.0.0.1:8000/mcp`，可看到工具并调用。
 - **游戏内聊天往返**：直接跑 `python test_chat_loop.py`，会用一个模拟 host 游戏把整条「`/ingame-in` → `read_ingame` → `send_ingame` → host `/chat/push`」走一遍。见到 `ALL OK` 即通。
 
 ## 加工具

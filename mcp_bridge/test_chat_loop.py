@@ -27,10 +27,10 @@ BRIDGE_WS = f"ws://127.0.0.1:{BRIDGE_PORT}/tunnel"
 BRIDGE_HTTP = f"http://127.0.0.1:{BRIDGE_PORT}"
 BRIDGE_MCP = f"http://127.0.0.1:{BRIDGE_PORT}/mcp"
 
-os.environ["NAGI_BRIDGE_TOKEN"] = TOKEN
-os.environ["NAGI_BRIDGE_MCP_AUTH"] = "1"
-os.environ["NAGI_GAME_URL"] = f"http://127.0.0.1:{HOST_MOCK_PORT + 1}"
-os.environ["NAGI_HOST_URL"] = f"http://127.0.0.1:{HOST_MOCK_PORT}"
+os.environ["WHEATSTOOK_BRIDGE_TOKEN"] = TOKEN
+os.environ["WHEATSTOOK_BRIDGE_MCP_AUTH"] = "1"
+os.environ["WHEATSTOOK_GAME_URL"] = f"http://127.0.0.1:{HOST_MOCK_PORT + 1}"
+os.environ["WHEATSTOOK_HOST_URL"] = f"http://127.0.0.1:{HOST_MOCK_PORT}"
 os.environ["PORT"] = str(BRIDGE_PORT)
 
 import client as client_mod          # noqa: E402

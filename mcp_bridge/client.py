@@ -1,15 +1,15 @@
-"""NagiBridge PC tunnel client (run on the same machine as the game).
+"""WheatStook PC tunnel client (run on the same machine as the game).
 
 Connects OUT to the Zeabur MCP bridge over WebSocket, authenticates with the shared
-token, and answers tool calls by mapping them to the game's NagiBridge HTTP API
+token, and answers tool calls by mapping them to the game's WheatStook HTTP API
 (http://127.0.0.1:<port>). Reconnects automatically if the link drops.
 
 Env:
-    NAGI_BRIDGE_URL       e.g. wss://<your-zeabur-url>/tunnel  (default ws://localhost:8000/tunnel)
-    NAGI_BRIDGE_TOKEN     shared secret, must match the server
-    NAGI_GAME_URL         farmhand game HTTP API (default http://localhost:58332)
-    NAGI_HOST_URL         host game HTTP API for in-game chat pushes (default http://localhost:58331)
-    NAGI_MODS_JSON        path to mods_keybinds.json (default ../scripts/mods_keybinds.json)
+    WHEATSTOOK_BRIDGE_URL       e.g. wss://<your-zeabur-url>/tunnel  (default ws://localhost:8000/tunnel)
+    WHEATSTOOK_BRIDGE_TOKEN     shared secret, must match the server
+    WHEATSTOOK_GAME_URL         farmhand game HTTP API (default http://localhost:58332)
+    WHEATSTOOK_HOST_URL         host game HTTP API for in-game chat pushes (default http://localhost:58331)
+    WHEATSTOOK_MODS_JSON        path to mods_keybinds.json (default ../scripts/mods_keybinds.json)
 """
 import asyncio
 import json
@@ -23,21 +23,21 @@ import urllib.request
 import websockets
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-log = logging.getLogger("nagibridge.tunnel")
+log = logging.getLogger("WheatStook.tunnel")
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 # A list of bridge endpoints to stay attached to at once (comma-separated).
 # LAN default: run server.py on this same PC, phone reaches it over Wi-Fi.
 # Add a cloud URL for away-from-home control, e.g. "ws://127.0.0.1:8000/tunnel,wss://<your-domain>/tunnel".
 BRIDGE_URLS = [u.strip() for u in os.environ.get(
-    "NAGI_BRIDGE_URLS",
-    os.environ.get("NAGI_BRIDGE_URL", "ws://127.0.0.1:8000/tunnel"),
+    "WHEATSTOOK_BRIDGE_URLS",
+    os.environ.get("WHEATSTOOK_BRIDGE_URL", "ws://127.0.0.1:8000/tunnel"),
 ).split(",") if u.strip()]
-TOKEN = os.environ.get("NAGI_BRIDGE_TOKEN", "changeme").strip()
-GAME_URL = os.environ.get("NAGI_GAME_URL", "http://localhost:58332")  # farmhand (AI-controlled) game
-HOST_URL = os.environ.get("NAGI_HOST_URL", "http://localhost:58331")  # host (player) game, for in-game chat pushes
+TOKEN = os.environ.get("WHEATSTOOK_BRIDGE_TOKEN", "changeme").strip()
+GAME_URL = os.environ.get("WHEATSTOOK_GAME_URL", "http://localhost:58332")  # farmhand (AI-controlled) game
+HOST_URL = os.environ.get("WHEATSTOOK_HOST_URL", "http://localhost:58331")  # host (player) game, for in-game chat pushes
 MODS_JSON = os.environ.get(
-    "NAGI_MODS_JSON",
+    "WHEATSTOOK_MODS_JSON",
     os.path.normpath(os.path.join(_DIR, "..", "scripts", "mods_keybinds.json")),
 )
 
@@ -112,6 +112,7 @@ ROUTES = {
     "chat": ("POST", "/chat", {"message": None}),
     "select": ("POST", "/select", {"name": None}),
     "buy": ("POST", "/buy", {"index": None, "count": None}),
+    "tractor": ("POST", "/tractor", {"op": None}),
 }
 
 # Methods that target the HOST game (the player) rather than the farmhand — used for in-game chat replies.
@@ -150,7 +151,7 @@ async def session(uri):
         await ws.send(json.dumps({"type": "hello", "token": TOKEN, "game": GAME_URL}))
         hello = json.loads(await ws.recv())
         if hello.get("type") == "unauthorized":
-            log.error("Bridge rejected token — check NAGI_BRIDGE_TOKEN")
+            log.error("Bridge rejected token — check WHEATSTOOK_BRIDGE_TOKEN")
             raise RuntimeError("unauthorized")
         log.info("Connected to bridge (%s)", hello.get("game"))
         async for raw in ws:
@@ -179,12 +180,12 @@ async def _keepalive(uri):
 
 
 async def main():
-    assert TOKEN != "changeme", "Set NAGI_BRIDGE_TOKEN to match the bridge."
+    assert TOKEN != "changeme", "Set WHEATSTOOK_BRIDGE_TOKEN to match the bridge."
     await asyncio.gather(*(_keepalive(u) for u in BRIDGE_URLS))
 
 
 if __name__ == "__main__":
-    print(f"NagiBridge tunnel client | bridges={BRIDGE_URLS} game={GAME_URL}")
+    print(f"WheatStook tunnel client | bridges={BRIDGE_URLS} game={GAME_URL}")
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

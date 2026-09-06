@@ -1,4 +1,4 @@
-"""NagiBridge remote MCP bridge (runs on Zeabur).
+"""WheatStook remote MCP bridge (runs on Zeabur).
 
 Exposes the Stardew game-control tools as MCP tools over Streamable HTTP (the modern
 MCP transport) at /mcp, so the phone client (e.g. operit) can connect directly. It also
@@ -9,13 +9,13 @@ initialise the session manager, and an outer path-mount breaks its /mcp route. S
 build the Starlette app and add our own /tunnel + /health + / routes onto it.
 
 Security: the MCP endpoint's tools only do something while the PC tunnel (authenticated
-with NAGI_BRIDGE_TOKEN) is up and a real game is running — the tunnel token is the real
-gate. Optionally set NAGI_BRIDGE_MCP_AUTH=1 to also require a Bearer token on /mcp.
+with WHEATSTOOK_BRIDGE_TOKEN) is up and a real game is running — the tunnel token is the real
+gate. Optionally set WHEATSTOOK_BRIDGE_MCP_AUTH=1 to also require a Bearer token on /mcp.
 
 Env:
     PORT                   (Zeabur provides; default 8000)
-    NAGI_BRIDGE_TOKEN      shared secret, must match the PC client
-    NAGI_BRIDGE_MCP_AUTH   optional: if '1', require `Authorization: Bearer <token>` on /mcp
+    WHEATSTOOK_BRIDGE_TOKEN      shared secret, must match the PC client
+    WHEATSTOOK_BRIDGE_MCP_AUTH   optional: if '1', require `Authorization: Bearer <token>` on /mcp
 """
 import asyncio
 import json
@@ -29,13 +29,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-log = logging.getLogger("nagibridge.mcp")
+log = logging.getLogger("WheatStook.mcp")
 
 # Strip whitespace/CRLF so a token read from a batch file (token.txt) always matches cleanly.
-TOKEN = os.environ.get("NAGI_BRIDGE_TOKEN", "changeme").strip()
+TOKEN = os.environ.get("WHEATSTOOK_BRIDGE_TOKEN", "changeme").strip()
 # MCP auth is ON by default: /mcp requires `Authorization: Bearer <token>`.
-# Set NAGI_BRIDGE_MCP_AUTH=0 to disable (only if you trust the network).
-REQUIRE_MCP_AUTH = os.environ.get("NAGI_BRIDGE_MCP_AUTH", "1") == "1"
+# Set WHEATSTOOK_BRIDGE_MCP_AUTH=0 to disable (only if you trust the network).
+REQUIRE_MCP_AUTH = os.environ.get("WHEATSTOOK_BRIDGE_MCP_AUTH", "1") == "1"
 PORT = int(os.environ.get("PORT", "8000"))
 
 # FastMCP enables DNS-rebinding protection by default when it thinks it's on a
@@ -44,7 +44,7 @@ PORT = int(os.environ.get("PORT", "8000"))
 # token on /mcp is the real gate, so disable that Host-header allowlist so the
 # bridge accepts the LAN IP (and any hostname) that the phone uses.
 mcp = FastMCP(
-    "NagiBridge Game Control",
+    "WheatStook Game Control",
     transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
 )
 
@@ -185,6 +185,12 @@ async def buy(index: int, count: int = 1) -> str:
 
 
 @mcp.tool()
+async def tractor(op: str = "state") -> str:
+    """Tractor Mod control: 'state' reports whether the farmhand is riding the tractor and its mount; 'dismiss' hops off. 'summon' is host-coupled in Tractor Mod and will return an honest 'needs host' error rather than pretending it worked."""
+    return await _tool("tractor", {"op": op})
+
+
+@mcp.tool()
 async def read_ingame() -> str:
     """Read any in-game chat messages the player typed in Stardew (from the host game's Nagi chat panel). Returns pending messages and clears them. Call this to see what the player said in-game."""
     global _ingame_inbox
@@ -223,8 +229,8 @@ async def _health(request):
 
 
 def _lan_ip():
-    """Override with NAGI_LAN_IP if set (handy for VPN/multi-NIC/no-internet), else auto-detect."""
-    override = os.environ.get("NAGI_LAN_IP", "").strip()
+    """Override with WHEATSTOOK_LAN_IP if set (handy for VPN/multi-NIC/no-internet), else auto-detect."""
+    override = os.environ.get("WHEATSTOOK_LAN_IP", "").strip()
     if override:
         return override
     try:
@@ -239,7 +245,7 @@ def _lan_ip():
 
 async def _root(request):
     return JSONResponse({
-        "service": "NagiBridge MCP Bridge",
+        "service": "WheatStook MCP Bridge",
         "mcp": "/mcp", "tunnel": "/tunnel", "health": "/health",
         "phone_lan_url": f"http://{_lan_ip()}:{PORT}/mcp",
     })
@@ -315,13 +321,13 @@ if __name__ == "__main__":
     import uvicorn
 
     lan = _lan_ip()
-    print("NagiBridge MCP bridge")
+    print("WheatStook MCP bridge")
     print(f"  MCP endpoint (streamable HTTP):  /mcp")
     print(f"  Phone on home Wi-Fi (LAN):        http://{lan}:{PORT}/mcp")
     print(f"  Phone anywhere (cloud):           https://<your-domain>/mcp")
-    print(f"  PC client tunnel:                 /tunnel  (set NAGI_BRIDGE_URLS on the PC client)")
+    print(f"  PC client tunnel:                 /tunnel  (set WHEATSTOOK_BRIDGE_URLS on the PC client)")
     if not REQUIRE_MCP_AUTH:
-        print("  !!! WARNING: /mcp has NO authentication (set NAGI_BRIDGE_MCP_AUTH=1 to require a Bearer token).")
+        print("  !!! WARNING: /mcp has NO authentication (set WHEATSTOOK_BRIDGE_MCP_AUTH=1 to require a Bearer token).")
     if TOKEN == "changeme":
-        print("  !!! WARNING: NAGI_BRIDGE_TOKEN is still 'changeme' — set a strong random secret.")
+        print("  !!! WARNING: WHEATSTOOK_BRIDGE_TOKEN is still 'changeme' — set a strong random secret.")
     uvicorn.run(app, host="0.0.0.0", port=PORT)
